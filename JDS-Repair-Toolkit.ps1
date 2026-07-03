@@ -664,10 +664,11 @@ function Update-ToolStatuses {
                   Where-Object { $_.Name -match "Windows Repair Unlocked" } | Select-Object -First 1
     $repairExe = $null
     if ($repairDir) {
-        $repairExe = Join-Path $repairDir.FullName "Repair_Windows.exe"
+        $repairExe = Get-ChildItem -Path $repairDir.FullName -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | 
+                      Where-Object { $_.Name -match "Windows Repair" -or $_.Name -match "Repair_Windows" } | Select-Object -First 1
     }
-    if ($repairExe -and (Test-Path $repairExe)) {
-        $WPF_TxtTweakingStatus.Text = "Détecté ($repairExe)"
+    if ($repairExe -and (Test-Path $repairExe.FullName)) {
+        $WPF_TxtTweakingStatus.Text = "Détecté ($($repairExe.FullName))"
         $WPF_TxtTweakingStatus.Foreground = [System.Windows.Media.Brushes]::LightGreen
         $WPF_BtnRunTweaking.IsEnabled = $true
     } else {
@@ -680,7 +681,8 @@ function Update-ToolStatuses {
     $toolboxDir = Get-ChildItem -Path $Path -Directory -Filter "*Repair Toolbox*" -ErrorAction SilentlyContinue | Select-Object -First 1
     $toolboxExe = $null
     if ($toolboxDir) {
-        $toolboxExe = Get-ChildItem -Path $toolboxDir.FullName -Filter "*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+        $toolboxExe = Get-ChildItem -Path $toolboxDir.FullName -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | 
+                      Where-Object { $_.Name -match "Windows Repair Toolbox" } | Select-Object -First 1
     }
     if ($toolboxExe) {
         $WPF_TxtPWRTStatus.Text = "Détecté ($($toolboxExe.FullName))"
@@ -1336,9 +1338,10 @@ $WPF_BtnRunTweaking.Add_Click({
     $repairDir = Get-ChildItem -Path $Config.ToolsPath -Directory -Filter "*Repair*" -ErrorAction SilentlyContinue | 
                   Where-Object { $_.Name -match "Windows Repair Unlocked" } | Select-Object -First 1
     if ($repairDir) {
-        $repairExe = Join-Path $repairDir.FullName "Repair_Windows.exe"
-        if (Test-Path $repairExe) {
-            Start-Process $repairExe -Verb RunAs
+        $repairExe = Get-ChildItem -Path $repairDir.FullName -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | 
+                      Where-Object { $_.Name -match "Windows Repair" -or $_.Name -match "Repair_Windows" } | Select-Object -First 1
+        if ($repairExe) {
+            Start-Process $repairExe.FullName -Verb RunAs
         }
     }
 })
@@ -1347,7 +1350,8 @@ $WPF_BtnRunTweaking.Add_Click({
 $WPF_BtnRunPWRT.Add_Click({
     $toolboxDir = Get-ChildItem -Path $Config.ToolsPath -Directory -Filter "*Repair Toolbox*" -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($toolboxDir) {
-        $toolboxExe = Get-ChildItem -Path $toolboxDir.FullName -Filter "*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+        $toolboxExe = Get-ChildItem -Path $toolboxDir.FullName -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | 
+                      Where-Object { $_.Name -match "Windows Repair Toolbox" } | Select-Object -First 1
         if ($toolboxExe) {
             Start-Process $toolboxExe.FullName -Verb RunAs
         }
