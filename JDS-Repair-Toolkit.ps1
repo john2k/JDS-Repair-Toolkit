@@ -32,10 +32,39 @@ if (-not (Get-Command Start-ThreadJob -ErrorAction SilentlyContinue)) {
             [scriptblock]$ScriptBlock,
             [object[]]$ArgumentList = @()
         )
-        if ($ArgumentList.Count -gt 0) {
-            Start-Job -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
-        } else {
-            Start-Job -ScriptBlock $ScriptBlock
+        $ps = [PowerShell]::Create()
+        $ps.AddScript($ScriptBlock) | Out-Null
+        if ($ArgumentList) {
+            foreach ($arg in $ArgumentList) {
+                $ps.AddArgument($arg) | Out-Null
+            }
+        }
+        $asyncResult = $ps.BeginInvoke()
+        [PSCustomObject]@{
+            PSType             = "RunspaceJob"
+            PowerShellInstance = $ps
+            AsyncResult        = $asyncResult
+        }
+    }
+
+    function Receive-Job {
+        param(
+            [Parameter(ValueFromPipeline = $true)]
+            [object]$Job,
+            [switch]$Wait,
+            [switch]$AutoRemoveJob
+        )
+        process {
+            if ($Job -and $Job.PSType -eq "RunspaceJob") {
+                if ($Wait) {
+                    $Job.AsyncResult.AsyncWaitHandle.WaitOne() | Out-Null
+                }
+                $results = $Job.PowerShellInstance.EndInvoke($Job.AsyncResult)
+                $Job.PowerShellInstance.Dispose()
+                return $results
+            } else {
+                Microsoft.PowerShell.Core\Receive-Job -Job $Job -Wait:$Wait -AutoRemoveJob:$AutoRemoveJob
+            }
         }
     }
 }
