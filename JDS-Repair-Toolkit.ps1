@@ -1,0 +1,1053 @@
+#Requires -Version 5.1
+<#
+.SYNOPSIS
+    JDS-Repair-Toolkit - Outil de Dépannage Windows Unifié
+    Interface WPF moderne pour le nettoyage, diagnostic, réparation et intégration d'outils.
+#>
+
+[CmdletBinding()]
+param()
+
+# Assurer l'exécution en tant qu'administrateur
+$currentPrincipal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "[>>] Relancement avec privilèges Administrateur..." -ForegroundColor Yellow
+    $scriptPath = $MyInvocation.MyCommand.Path
+    if ($scriptPath) {
+        Start-Process powershell.exe -ArgumentList "-ExecutionPolicy Bypass -File `"$scriptPath`"" -Verb RunAs
+    } else {
+        # Si exécuté via irm | iex, relancer l'expression avec prompt UAC
+        Start-Process powershell.exe -ArgumentList "-ExecutionPolicy Bypass -Command `"& { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; iex (irm 'https://raw.githubusercontent.com/john2k/JDS-Repair-Toolkit/main/JDS-Repair-Toolkit.ps1') }`"" -Verb RunAs
+    }
+    exit
+}
+
+# Charger les assemblys requises pour WPF
+Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms, System.Drawing
+
+# Répertoire de travail
+$ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { $pwd.Path }
+$ConfigFile = Join-Path $ScriptDir "JDS-Repair-Toolkit-Config.json"
+
+# Charger ou définir la configuration initiale
+$Config = @{
+    ToolsPath = ""
+}
+if (Test-Path $ConfigFile) {
+    try {
+        $Config = Get-Content $ConfigFile -Raw | ConvertFrom-Json
+    } catch {}
+}
+
+# Détecter si les outils sont présents localement par défaut
+if ([string]::IsNullOrEmpty($Config.ToolsPath)) {
+    if (Test-Path (Join-Path $ScriptDir "FAB")) {
+        $Config.ToolsPath = $ScriptDir
+    }
+}
+
+# Chemins réseau pré-définis
+$PredefinedPaths = @(
+    "\\11.11.11.223\Tech\jds-toolbox",
+    "\\192.168.1.100\Shared\JDS-Toolkit",
+    "\\10.0.0.5\Public\Rescue-Tools"
+)
+
+# Code XAML pour l'interface graphique
+[xml]$xaml = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="JDS Repair Toolkit - Console de Dépannage v1.0" Height="680" Width="1000"
+        WindowStartupLocation="CenterScreen" Background="#1E1E24" ResizeMode="CanMinimize">
+    <Window.Resources>
+        <!-- Styles des boutons de la barre latérale -->
+        <Style x:Key="SidebarButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#CCCCCC"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="15,12,15,12"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#252530"/>
+                    <Setter Property="Foreground" Value="#00D2C4"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <!-- Styles des boutons standards -->
+        <Style x:Key="ModernButton" TargetType="Button">
+            <Setter Property="Background" Value="#00adb5"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="12,8,12,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#00d2c4"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="#2A2A35"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="BorderBrush" Value="#444455"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,8,12,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#353545"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+    
+    <Grid>
+        <!-- Contenu Principal -->
+        <Grid Name="MainAppLayout" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Sidebar -->
+            <Grid Grid.Column="0" Background="#111115">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Titre / Logo -->
+                <StackPanel Grid.Row="0" Margin="15,20,15,20">
+                    <TextBlock Text="JDS REPAIR" FontSize="20" FontWeight="Bold" Foreground="#00D2C4" HorizontalAlignment="Center"/>
+                    <TextBlock Text="TOOLKIT" FontSize="12" FontWeight="SemiBold" Foreground="#888888" HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Menu de navigation -->
+                <StackPanel Grid.Row="1">
+                    <Button Name="BtnTabDiag" Style="{StaticResource SidebarButton}" Content="🩺  Diagnostics"/>
+                    <Button Name="BtnTabClean" Style="{StaticResource SidebarButton}" Content="🧹  Nettoyage"/>
+                    <Button Name="BtnTabRepair" Style="{StaticResource SidebarButton}" Content="🛠️  Réparations"/>
+                    <Button Name="BtnTabBackup" Style="{StaticResource SidebarButton}" Content="💾  Sauvegarde (FAB)"/>
+                    <Button Name="BtnTabOptane" Style="{StaticResource SidebarButton}" Content="⚙️  Pilotes / Optane"/>
+                    <Button Name="BtnTabTools" Style="{StaticResource SidebarButton}" Content="🧰  Outils Tiers"/>
+                </StackPanel>
+
+                <!-- Status / Version footer -->
+                <StackPanel Grid.Row="2" Margin="15" Orientation="Vertical">
+                    <TextBlock Name="TxtStatusPath" Text="Dossier : Local" FontSize="10" Foreground="#666666" TextTrimming="CharacterEllipsis"/>
+                    <Button Name="BtnChangePath" Content="Modifier le chemin" Background="Transparent" Foreground="#00adb5" BorderThickness="0" FontSize="10" HorizontalAlignment="Left" Cursor="Hand" Margin="0,5,0,0"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Zone de contenu principale -->
+            <Grid Grid.Column="1" Margin="25">
+                <!-- Onglet DIAGNOSTICS -->
+                <Grid Name="GridDiag" Visibility="Visible">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="Diagnostic &amp; Informations Système" FontSize="22" FontWeight="Bold" Foreground="White" Margin="0,0,0,15"/>
+                    
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <Border Background="#252530" CornerRadius="5" Padding="15" Margin="0,0,0,15">
+                                <StackPanel>
+                                    <TextBlock Text="🖥️ Système" FontSize="16" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,10"/>
+                                    <TextBlock Name="TxtDiagOS" Text="OS : Détection en cours..." Foreground="White" Margin="0,2,0,2"/>
+                                    <TextBlock Name="TxtDiagCPU" Text="Processeur : Détection en cours..." Foreground="White" Margin="0,2,0,2"/>
+                                    <TextBlock Name="TxtDiagRAM" Text="Mémoire RAM : Détection en cours..." Foreground="White" Margin="0,2,0,2"/>
+                                    <TextBlock Name="TxtDiagMB" Text="Carte Mère : Détection en cours..." Foreground="White" Margin="0,2,0,2"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Background="#252530" CornerRadius="5" Padding="15" Margin="0,0,0,15">
+                                <StackPanel>
+                                    <TextBlock Text="🛡️ Sécurité &amp; Antivirus" FontSize="16" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,10"/>
+                                    <TextBlock Name="TxtDiagAV" Text="Antivirus détectés : Recherche..." Foreground="White"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Background="#252530" CornerRadius="5" Padding="15">
+                                <StackPanel>
+                                    <TextBlock Text="💾 Stockage &amp; SMART (Physique)" FontSize="16" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,10"/>
+                                    <TextBlock Name="TxtDiagDisks" Text="Analyse des disques..." Foreground="White" FontFamily="Consolas"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                    
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                        <Button Name="BtnRefreshDiag" Style="{StaticResource ModernButton}" Content="Rafraîchir les informations" Width="180"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Onglet NETTOYAGE -->
+                <Grid Name="GridClean" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="Nettoyage du Système" FontSize="22" FontWeight="Bold" Foreground="White" Margin="0,0,0,15"/>
+                    
+                    <StackPanel Grid.Row="1">
+                        <Border Background="#252530" CornerRadius="5" Padding="15" Margin="0,0,0,15">
+                            <StackPanel>
+                                <TextBlock Text="🧹 Fichiers Temporaires &amp; Caches" FontSize="16" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,10"/>
+                                <TextBlock Text="Cette option supprime les fichiers temporaires de Windows, le cache de Windows Update et les caches des principaux navigateurs internet." Foreground="#AAAAAA" TextWrapping="Wrap" Margin="0,0,0,15"/>
+                                <CheckBox Name="ChkCleanTemp" Content="Fichiers Temporaires Windows (%TEMP%)" Foreground="White" IsChecked="True" Margin="0,0,0,8"/>
+                                <CheckBox Name="ChkCleanUpdate" Content="Cache Windows Update (SoftwareDistribution)" Foreground="White" IsChecked="True" Margin="0,0,0,8"/>
+                                <CheckBox Name="ChkCleanBrowsers" Content="Caches navigateurs (Chrome, Edge, Firefox)" Foreground="White" IsChecked="True" Margin="0,0,0,15"/>
+                                <Button Name="BtnStartClean" Style="{StaticResource ModernButton}" Content="Lancer le Nettoyage" HorizontalAlignment="Left" Width="180"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="#252530" CornerRadius="5" Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="📦 Bloatware &amp; Applications indésirables" FontSize="16" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,10"/>
+                                <TextBlock Text="Ouvrir le panneau classique pour désinstaller rapidement les programmes installés par défaut ou superflus." Foreground="#AAAAAA" TextWrapping="Wrap" Margin="0,0,0,15"/>
+                                <Button Name="BtnOpenAppwiz" Style="{StaticResource SecondaryButton}" Content="Ouvrir Programmes et Fonctionnalités" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Terminal de logs pour le nettoyage -->
+                    <TextBox Grid.Row="2" Name="TxtLogClean" Height="150" Background="#121216" Foreground="#00FF00" FontFamily="Consolas" FontSize="12" IsReadOnly="True" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" Text="En attente du lancement..." BorderThickness="1" BorderBrush="#333333"/>
+                </Grid>
+
+                <!-- Onglet REPARATIONS -->
+                <Grid Name="GridRepair" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="Outils de Réparation Intégrés" FontSize="22" FontWeight="Bold" Foreground="White" Margin="0,0,0,15"/>
+                    
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <WrapPanel ItemWidth="350" ItemHeight="160">
+                            <!-- SFC / DISM -->
+                            <Border Background="#252530" CornerRadius="5" Padding="15" Margin="5">
+                                <StackPanel>
+                                    <TextBlock Text="🛠️ SFC &amp; DISM" FontSize="15" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,5"/>
+                                    <TextBlock Text="Répare l'intégrité des fichiers système et du magasin de composants Windows." Foreground="#AAAAAA" FontSize="11" TextWrapping="Wrap" Height="40"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                        <Button Name="BtnRunSFC" Style="{StaticResource ModernButton}" Content="Lancer SFC" Width="100" Margin="0,0,10,0"/>
+                                        <Button Name="BtnRunDISM" Style="{StaticResource ModernButton}" Content="Lancer DISM" Width="100"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Windows Update Repair -->
+                            <Border Background="#252530" CornerRadius="5" Padding="15" Margin="5">
+                                <StackPanel>
+                                    <TextBlock Text="🔄 Réparation Windows Update" FontSize="15" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,5"/>
+                                    <TextBlock Text="Réinitialise complètement les services et le dossier temporaire de mise à jour Windows." Foreground="#AAAAAA" FontSize="11" TextWrapping="Wrap" Height="40"/>
+                                    <Button Name="BtnFixWU" Style="{StaticResource ModernButton}" Content="Réparer Windows Update" Width="180" Margin="0,10,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Network Reset -->
+                            <Border Background="#252530" CornerRadius="5" Padding="15" Margin="5">
+                                <StackPanel>
+                                    <TextBlock Text="🌐 Réinitialisation Réseau" FontSize="15" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,5"/>
+                                    <TextBlock Text="Vide le DNS, réinitialise Winsock et TCP/IP pour régler les soucis de connexion." Foreground="#AAAAAA" FontSize="11" TextWrapping="Wrap" Height="40"/>
+                                    <Button Name="BtnResetNetwork" Style="{StaticResource ModernButton}" Content="Réinitialiser le Réseau" Width="180" Margin="0,10,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Planificateur de tâches -->
+                            <Border Background="#252530" CornerRadius="5" Padding="15" Margin="5">
+                                <StackPanel>
+                                    <TextBlock Text="📅 Tâches Suspectes" FontSize="15" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,5"/>
+                                    <TextBlock Text="Recherche les tâches planifiées ajoutées récemment ou potentiellement indésirables." Foreground="#AAAAAA" FontSize="11" TextWrapping="Wrap" Height="40"/>
+                                    <Button Name="BtnAuditTasks" Style="{StaticResource ModernButton}" Content="Analyser les Tâches" Width="180" Margin="0,10,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </WrapPanel>
+                    </ScrollViewer>
+
+                    <!-- Terminal de logs pour les réparations -->
+                    <TextBox Grid.Row="2" Name="TxtLogRepair" Height="180" Background="#121216" Foreground="#00FF00" FontFamily="Consolas" FontSize="12" IsReadOnly="True" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" Text="Prêt à lancer..." BorderThickness="1" BorderBrush="#333333"/>
+                </Grid>
+
+                <!-- Onglet SAUVEGARDE -->
+                <Grid Name="GridBackup" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="Sauvegarde et Restauration" FontSize="22" FontWeight="Bold" Foreground="White" Margin="0,0,0,15"/>
+                    
+                    <StackPanel Grid.Row="1">
+                        <Border Background="#252530" CornerRadius="5" Padding="20" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="💾 Fab's AutoBackup 7 Pro" FontSize="18" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,10"/>
+                                <TextBlock Text="Permet de sauvegarder ou restaurer automatiquement les documents, images, favoris et boîtes mails de tous les utilisateurs." Foreground="#AAAAAA" TextWrapping="Wrap" Margin="0,0,0,15"/>
+                                
+                                <Grid Margin="0,0,0,15">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Statut : " Foreground="White" FontWeight="Bold"/>
+                                    <TextBlock Grid.Column="1" Name="TxtFABStatus" Text="Non détecté" Foreground="#FF5555" Margin="5,0,0,0"/>
+                                </Grid>
+
+                                <Button Name="BtnRunFAB" Style="{StaticResource ModernButton}" Content="Lancer Fab's AutoBackup" HorizontalAlignment="Left" Width="200" IsEnabled="False"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="#252530" CornerRadius="5" Padding="20">
+                            <StackPanel>
+                                <TextBlock Text="📦 Sauvegarde Rapide Alternative (Native)" FontSize="16" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,10"/>
+                                <TextBlock Text="Sauvegarde les dossiers essentiels de l'utilisateur actif vers un répertoire sélectionné." Foreground="#AAAAAA" TextWrapping="Wrap" Margin="0,0,0,15"/>
+                                <Button Name="BtnRunNativeBackup" Style="{StaticResource SecondaryButton}" Content="Lancer la Sauvegarde Native" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Onglet OPTANE -->
+                <Grid Name="GridOptane" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="Injection de Pilotes RST / Optane" FontSize="22" FontWeight="Bold" Foreground="White" Margin="0,0,0,15"/>
+                    
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <Border Background="#252530" CornerRadius="5" Padding="15" Margin="0,0,0,15">
+                                <StackPanel>
+                                    <TextBlock Text="⚙️ Préparation du disque cible" FontSize="16" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,10"/>
+                                    <TextBlock Text="Indiquez la lettre de la partition Windows cible où injecter les pilotes (ex: C, D, E)." Foreground="#AAAAAA" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="Lettre de lecteur :" Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBox Name="TxtOptaneDrive" Width="60" Height="25" Text="C" HorizontalAlignment="Left" Background="#1E1E24" Foreground="White" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" BorderBrush="#444455"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Background="#252530" CornerRadius="5" Padding="15" Margin="0,0,0,15">
+                                <StackPanel>
+                                    <TextBlock Text="📂 Dossier contenant les Pilotes Intel RST/Optane" FontSize="16" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,10"/>
+                                    <TextBlock Text="Spécifiez le chemin d'accès contenant les pilotes .inf" Foreground="#AAAAAA" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0" Name="TxtOptaneDriverPath" Height="25" Background="#1E1E24" Foreground="White" VerticalContentAlignment="Center" BorderBrush="#444455" Margin="0,0,10,0"/>
+                                        <Button Grid.Column="1" Name="BtnBrowseOptaneDrivers" Style="{StaticResource SecondaryButton}" Content="Parcourir" Height="25" Padding="10,0,10,0"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <StackPanel Grid.Row="2" Orientation="Vertical">
+                        <TextBox Name="TxtLogOptane" Height="150" Background="#121216" Foreground="#00FF00" FontFamily="Consolas" FontSize="12" IsReadOnly="True" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" Text="Prêt pour l'injection..." BorderThickness="1" BorderBrush="#333333" Margin="0,0,0,10"/>
+                        <Button Name="BtnRunOptaneInjection" Style="{StaticResource ModernButton}" Content="Injecter les Pilotes avec DISM" HorizontalAlignment="Right" Width="220"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Onglet OUTILS TIERS -->
+                <Grid Name="GridTools" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="Outils et Utilitaires Tiers" FontSize="22" FontWeight="Bold" Foreground="White" Margin="0,0,0,15"/>
+                    
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <!-- Tron Script -->
+                            <Border Background="#252530" CornerRadius="5" Padding="15" Margin="0,0,0,15">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="🚀 Tron Script" FontSize="16" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,5"/>
+                                        <TextBlock Text="Script d'automatisation complet pour désinfecter, nettoyer et optimiser Windows en profondeur. Idéal pour les machines très compromises." Foreground="#AAAAAA" TextWrapping="Wrap" FontSize="12"/>
+                                        <TextBlock Name="TxtTronStatus" Text="Statut : Non détecté" Foreground="#FF5555" Margin="0,5,0,0" FontSize="11"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Name="BtnRunTron" Style="{StaticResource ModernButton}" Content="Lancer Tron" Width="130" IsEnabled="False" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- Windows Repair Unlocked (All In One) -->
+                            <Border Background="#252530" CornerRadius="5" Padding="15" Margin="0,0,0,15">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="⚙️ Tweaking.com Windows Repair Unlocked" FontSize="16" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,5"/>
+                                        <TextBlock Text="Restaure les paramètres par défaut de Windows (registre, permissions de fichiers, pare-feu, hôtes, etc.)." Foreground="#AAAAAA" TextWrapping="Wrap" FontSize="12"/>
+                                        <TextBlock Name="TxtTweakingStatus" Text="Statut : Non détecté" Foreground="#FF5555" Margin="0,5,0,0" FontSize="11"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Name="BtnRunTweaking" Style="{StaticResource ModernButton}" Content="Lancer Repair" Width="130" IsEnabled="False" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- Portable Windows Repair Toolbox -->
+                            <Border Background="#252530" CornerRadius="5" Padding="15" Margin="0,0,0,15">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="🧰 Portable Windows Repair Toolbox" FontSize="16" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,5"/>
+                                        <TextBlock Text="Suite d'utilitaires portables téléchargés à la demande pour diagnostiquer et corriger divers problèmes." Foreground="#AAAAAA" TextWrapping="Wrap" FontSize="12"/>
+                                        <TextBlock Name="TxtPWRTStatus" Text="Statut : Non détecté" Foreground="#FF5555" Margin="0,5,0,0" FontSize="11"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Name="BtnRunPWRT" Style="{StaticResource ModernButton}" Content="Lancer Toolbox" Width="130" IsEnabled="False" VerticalAlignment="Center" Margin="15,0,0,0"/>
+                                </Grid>
+                            </Border>
+                            
+                            <!-- Services Windows -->
+                            <Border Background="#252530" CornerRadius="5" Padding="15">
+                                <StackPanel>
+                                    <TextBlock Text="⚙️ Gestionnaire de Services Rapide" FontSize="16" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,10"/>
+                                    <TextBlock Text="Permet d'ouvrir le gestionnaire de services système directement." Foreground="#AAAAAA" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                    <Button Name="BtnOpenServices" Style="{StaticResource SecondaryButton}" Content="Ouvrir services.msc" HorizontalAlignment="Left"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- Overlay de sélection de chemin initial -->
+        <Grid Name="PathSelectorOverlay" Visibility="Visible" Background="#16161D">
+            <Border Width="600" Height="480" Background="#1E1E24" CornerRadius="8" Padding="25" VerticalAlignment="Center" HorizontalAlignment="Center" BorderBrush="#00adb5" BorderThickness="1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="0,0,0,15">
+                        <TextBlock Text="Sélection de la Boîte à Outils" FontSize="20" FontWeight="Bold" Foreground="#00D2C4"/>
+                        <TextBlock Text="Le toolkit doit localiser le répertoire contenant les dossiers d'outils tiers (FAB, Tron, optane-script, etc.)." Foreground="#AAAAAA" FontSize="12" Margin="0,5,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,5,0,15">
+                        <StackPanel>
+                            <TextBlock Text="📂 Sélectionner un chemin réseau configuré :" FontWeight="Bold" Foreground="White" Margin="0,0,0,8"/>
+                            <!-- Liste des chemins réseau préconfigurés -->
+                            <ListBox Name="LstPredefinedPaths" Background="#252530" Foreground="White" BorderBrush="#444455" Height="100" Margin="0,0,0,15"/>
+
+                            <TextBlock Text="📂 Ou saisir un chemin personnalisé :" FontWeight="Bold" Foreground="White" Margin="0,0,0,8"/>
+                            <Grid Margin="0,0,0,15">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Name="TxtCustomPath" Height="30" Background="#252530" Foreground="White" VerticalContentAlignment="Center" BorderBrush="#444455" Padding="5"/>
+                                <Button Grid.Column="1" Name="BtnBrowsePath" Style="{StaticResource SecondaryButton}" Content="Parcourir..." Height="30" Margin="10,0,0,0" Padding="15,0,15,0"/>
+                            </Grid>
+                            
+                            <CheckBox Name="ChkSaveConfig" Content="Sauvegarder ce chemin pour les prochains lancements" Foreground="White" IsChecked="True"/>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Name="BtnCancelPath" Style="{StaticResource SecondaryButton}" Content="Ignorer (Outils désactivés)" Margin="0,0,10,0"/>
+                        <Button Name="BtnConfirmPath" Style="{StaticResource ModernButton}" Content="Valider le chemin et Continuer" Padding="20,8,20,8"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
+"@
+
+# Nettoyage et chargement du XAML
+$xaml.Window.RemoveAttribute("x:Class")
+$reader = New-Object System.Xml.XmlNodeReader $xaml
+$Form = [Windows.Markup.XamlReader]::Load($reader)
+
+# Liaison des contrôles WPF dans des variables PowerShell globales
+$xaml.SelectNodes("//*[@Name]") | ForEach-Object {
+    Set-Variable -Name "WPF_$($_.Name)" -Value $Form.FindName($_.Name) -Scope Global
+}
+
+# Charger les chemins prédéfinis dans la liste
+$PredefinedPaths | ForEach-Object { [void]$WPF_LstPredefinedPaths.Items.Add($_) }
+
+# Fonction de mise à jour des statuts des outils tiers
+function Update-ToolStatuses {
+    param([string]$Path)
+
+    if ([string]::IsNullOrEmpty($Path)) {
+        $WPF_TxtStatusPath.Text = "Mode local : Outils désactivés"
+        return
+    }
+
+    $WPF_TxtStatusPath.Text = "Dossier : $Path"
+
+    # Vérification de Fab's AutoBackup
+    $fabExe = Join-Path $Path "FAB\AutoBackup7Pro.exe"
+    if (Test-Path $fabExe) {
+        $WPF_TxtFABStatus.Text = "Détecté ($fabExe)"
+        $WPF_TxtFABStatus.Foreground = [System.Windows.Media.Brushes]::LightGreen
+        $WPF_BtnRunFAB.IsEnabled = $true
+    } else {
+        $WPF_TxtFABStatus.Text = "Non détecté dans $Path\FAB\"
+        $WPF_TxtFABStatus.Foreground = [System.Windows.Media.Brushes]::Red
+        $WPF_BtnRunFAB.IsEnabled = $false
+    }
+
+    # Vérification de Tron Script
+    $tronDir = Get-ChildItem -Path $Path -Directory -Filter "Tron*" -ErrorAction SilentlyContinue | Select-Object -First 1
+    $tronBat = $null
+    if ($tronDir) {
+        $tronBat = Join-Path $tronDir.FullName "tron\tron.bat"
+    }
+    if ($tronBat -and (Test-Path $tronBat)) {
+        $WPF_TxtTronStatus.Text = "Détecté ($tronBat)"
+        $WPF_TxtTronStatus.Foreground = [System.Windows.Media.Brushes]::LightGreen
+        $WPF_BtnRunTron.IsEnabled = $true
+    } else {
+        $WPF_TxtTronStatus.Text = "Non détecté dans $Path\Tron*"
+        $WPF_TxtTronStatus.Foreground = [System.Windows.Media.Brushes]::Red
+        $WPF_BtnRunTron.IsEnabled = $false
+    }
+
+    # Vérification de Windows Repair
+    $repairDir = Get-ChildItem -Path $Path -Directory -Filter "*Repair*" -ErrorAction SilentlyContinue | 
+                  Where-Object { $_.Name -match "Windows Repair Unlocked" } | Select-Object -First 1
+    $repairExe = $null
+    if ($repairDir) {
+        $repairExe = Join-Path $repairDir.FullName "Repair_Windows.exe"
+    }
+    if ($repairExe -and (Test-Path $repairExe)) {
+        $WPF_TxtTweakingStatus.Text = "Détecté ($repairExe)"
+        $WPF_TxtTweakingStatus.Foreground = [System.Windows.Media.Brushes]::LightGreen
+        $WPF_BtnRunTweaking.IsEnabled = $true
+    } else {
+        $WPF_TxtTweakingStatus.Text = "Non détecté (Windows Repair Unlocked)"
+        $WPF_TxtTweakingStatus.Foreground = [System.Windows.Media.Brushes]::Red
+        $WPF_BtnRunTweaking.IsEnabled = $false
+    }
+
+    # Vérification de Portable Windows Repair Toolbox
+    $toolboxDir = Get-ChildItem -Path $Path -Directory -Filter "*Repair Toolbox*" -ErrorAction SilentlyContinue | Select-Object -First 1
+    $toolboxExe = $null
+    if ($toolboxDir) {
+        $toolboxExe = Get-ChildItem -Path $toolboxDir.FullName -Filter "*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+    }
+    if ($toolboxExe) {
+        $WPF_TxtPWRTStatus.Text = "Détecté ($($toolboxExe.FullName))"
+        $WPF_TxtPWRTStatus.Foreground = [System.Windows.Media.Brushes]::LightGreen
+        $WPF_BtnRunPWRT.IsEnabled = $true
+    } else {
+        $WPF_TxtPWRTStatus.Text = "Non détecté"
+        $WPF_TxtPWRTStatus.Foreground = [System.Windows.Media.Brushes]::Red
+        $WPF_BtnRunPWRT.IsEnabled = $false
+    }
+
+    # Mettre à jour le chemin des drivers Optane par défaut si présent
+    $optaneDir = Join-Path $Path "optane-script\Drivers"
+    if (Test-Path $optaneDir) {
+        $WPF_TxtOptaneDriverPath.Text = $optaneDir
+    }
+}
+
+# --- Actions de la sélection de chemin (Overlay) ---
+
+# Parcourir localement
+$WPF_BtnBrowsePath.Add_Click({
+    $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+    $dialog.Description = "Sélectionnez le dossier racine de la boîte à outils"
+    $dialog.ShowNewFolderButton = $false
+    if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+        $WPF_TxtCustomPath.Text = $dialog.SelectedPath
+    }
+})
+
+# Valider la sélection
+$WPF_BtnConfirmPath.Add_Click({
+    $selectedPath = ""
+    
+    # 1. Priorité à l'élément sélectionné dans la liste réseau
+    if ($WPF_LstPredefinedPaths.SelectedItem) {
+        $selectedPath = $WPF_LstPredefinedPaths.SelectedItem.ToString()
+    }
+    # 2. Sinon, chemin personnalisé
+    elseif (-not [string]::IsNullOrEmpty($WPF_TxtCustomPath.Text)) {
+        $selectedPath = $WPF_TxtCustomPath.Text
+    }
+
+    if (-not [string]::IsNullOrEmpty($selectedPath)) {
+        if (-not (Test-Path $selectedPath -ErrorAction SilentlyContinue)) {
+            [System.Windows.MessageBox]::Show("Le chemin spécifié est introuvable ou inaccessible. Si c'est un partage réseau, assurez-vous d'être connecté au réseau.", "Chemin invalide", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+            return
+        }
+        
+        $Config.ToolsPath = $selectedPath
+        
+        # Sauvegarder dans la configuration si coché
+        if ($WPF_SaveConfig.IsChecked) {
+            $Config | ConvertTo-Json | Out-File $ConfigFile -Force
+        }
+    }
+
+    # Mettre à jour et fermer l'overlay
+    Update-ToolStatuses $Config.ToolsPath
+    $WPF_PathSelectorOverlay.Visibility = [System.Windows.Visibility]::Collapsed
+    $WPF_MainAppLayout.Visibility = [System.Windows.Visibility]::Visible
+    
+    # Lancer le diagnostic de base au démarrage
+    Run-Diagnostics
+})
+
+# Ignorer (lancer l'outil sans outils tiers)
+$WPF_BtnCancelPath.Add_Click({
+    $Config.ToolsPath = ""
+    Update-ToolStatuses ""
+    $WPF_PathSelectorOverlay.Visibility = [System.Windows.Visibility]::Collapsed
+    $WPF_MainAppLayout.Visibility = [System.Windows.Visibility]::Visible
+    Run-Diagnostics
+})
+
+# Modifier le chemin depuis la Sidebar
+$WPF_BtnChangePath.Add_Click({
+    $WPF_MainAppLayout.Visibility = [System.Windows.Visibility]::Collapsed
+    $WPF_PathSelectorOverlay.Visibility = [System.Windows.Visibility]::Visible
+})
+
+# --- Logique de navigation des onglets ---
+$Grids = @($WPF_GridDiag, $WPF_GridClean, $WPF_GridRepair, $WPF_GridBackup, $WPF_GridOptane, $WPF_GridTools)
+
+function Show-Tab ($activeGrid) {
+    foreach ($grid in $Grids) {
+        if ($grid -eq $activeGrid) {
+            $grid.Visibility = [System.Windows.Visibility]::Visible
+        } else {
+            $grid.Visibility = [System.Windows.Visibility]::Collapsed
+        }
+    }
+}
+
+$WPF_BtnTabDiag.Add_Click({ Show-Tab $WPF_GridDiag })
+$WPF_BtnTabClean.Add_Click({ Show-Tab $WPF_GridClean })
+$WPF_BtnTabRepair.Add_Click({ Show-Tab $WPF_GridRepair })
+$WPF_BtnTabBackup.Add_Click({ Show-Tab $WPF_GridBackup })
+$WPF_BtnTabOptane.Add_Click({ Show-Tab $WPF_GridOptane })
+$WPF_BtnTabTools.Add_Click({ Show-Tab $WPF_GridTools })
+
+
+# --- ONGLET 1 : DIAGNOSTICS ---
+function Run-Diagnostics {
+    $WPF_TxtDiagOS.Text = "Analyse de l'OS..."
+    $WPF_TxtDiagCPU.Text = "Analyse du CPU..."
+    $WPF_TxtDiagRAM.Text = "Analyse de la RAM..."
+    $WPF_TxtDiagMB.Text = "Analyse de la Carte Mère..."
+    $WPF_TxtDiagAV.Text = "Recherche des logiciels de sécurité..."
+    $WPF_TxtDiagDisks.Text = "Analyse SMART des disques..."
+
+    # Lancer en arrière-plan pour ne pas geler l'UI
+    Start-ThreadJob {
+        # OS Info
+        $os = Get-CimInstance Win32_OperatingSystem
+        $osText = "OS : $($os.Caption) ($($os.OSArchitecture)) - Build $($os.Version)"
+        
+        # CPU
+        $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
+        $cpuText = "Processeur : $($cpu.Name.Trim())"
+
+        # RAM
+        $ramBytes = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum).Sum
+        $ramText = "Mémoire RAM : " + [math]::Round($ramBytes / 1GB, 1) + " Go installés"
+
+        # Board
+        $board = Get-CimInstance Win32_BaseBoard
+        $mbText = "Carte Mère : $($board.Manufacturer) $($board.Product)"
+
+        # Antivirus
+        $avList = @()
+        try {
+            $wmiAV = Get-CimInstance -Namespace "root\SecurityCenter2" -ClassName "AntiVirusProduct" -ErrorAction SilentlyContinue
+            if ($wmiAV) {
+                foreach ($av in $wmiAV) {
+                    $avList += $av.displayName
+                }
+            }
+        } catch {}
+        if ($avList.Count -eq 0) { $avList += "Aucun antivirus tiers détecté (Windows Defender uniquement ou non référencé)" }
+        $avText = "Antivirus : " + ($avList -join ", ")
+
+        # Disques SMART
+        $diskInfo = ""
+        try {
+            $disks = Get-PhysicalDisk
+            foreach ($d in $disks) {
+                $status = $d.HealthStatus
+                $diskInfo += "Disque #$($d.DeviceId) - $($d.FriendlyName) ($([math]::Round($d.Size / 1GB, 0)) Go) - Santé: $status`r`n"
+            }
+        } catch {
+            $diskInfo = "Erreur lors de la récupération des informations de disque physique."
+        }
+
+        # Renvoyer les résultats à l'UI
+        return @{
+            os = $osText
+            cpu = $cpuText
+            ram = $ramText
+            mb = $mbText
+            av = $avText
+            disks = $diskInfo
+        }
+    } | Receive-Job -Wait -AutoRemoveJob | ForEach-Object {
+        $WPF_TxtDiagOS.Text = $_.os
+        $WPF_TxtDiagCPU.Text = $_.cpu
+        $WPF_TxtDiagRAM.Text = $_.ram
+        $WPF_TxtDiagMB.Text = $_.mb
+        $WPF_TxtDiagAV.Text = $_.av
+        $WPF_TxtDiagDisks.Text = $_.disks
+    }
+}
+$WPF_BtnRefreshDiag.Add_Click({ Run-Diagnostics })
+
+
+# --- ONGLET 2 : NETTOYAGE ---
+$WPF_BtnOpenAppwiz.Add_Click({
+    Start-Process appwiz.cpl
+})
+
+$WPF_BtnStartClean.Add_Click({
+    $WPF_TxtLogClean.Text = "Début du nettoyage...`r`n"
+    
+    $cleanTemp = $WPF_ChkCleanTemp.IsChecked
+    $cleanWU = $WPF_ChkCleanUpdate.IsChecked
+    $cleanBrowsers = $WPF_ChkCleanBrowsers.IsChecked
+
+    # Exécution dans un thread
+    Start-ThreadJob -ArgumentList $cleanTemp, $cleanWU, $cleanBrowsers {
+        param($temp, $wu, $browsers)
+        $log = ""
+
+        if ($temp) {
+            $log += "[>>] Nettoyage des fichiers temporaires Windows...`r`n"
+            $tempPaths = @("$env:SystemRoot\Temp", "$env:LOCALAPPDATA\Temp")
+            foreach ($path in $tempPaths) {
+                if (Test-Path $path) {
+                    Get-ChildItem -Path $path -Recurse -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+                }
+            }
+            $log += "[OK] Fichiers temporaires nettoyés.`r`n"
+        }
+
+        if ($wu) {
+            $log += "[>>] Arrêt des services liés aux mises à jour...`r`n"
+            Stop-Service -Name wuauserv -Force -ErrorAction SilentlyContinue
+            Stop-Service -Name bits -Force -ErrorAction SilentlyContinue
+            
+            $log += "[>>] Suppression du cache Windows Update...`r`n"
+            $wuPath = "$env:SystemRoot\SoftwareDistribution"
+            if (Test-Path $wuPath) {
+                Get-ChildItem -Path $wuPath -Recurse -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+            }
+
+            $log += "[>>] Redémarrage des services...`r`n"
+            Start-Service -Name wuauserv -ErrorAction SilentlyContinue
+            Start-Service -Name bits -ErrorAction SilentlyContinue
+            $log += "[OK] Cache Windows Update réinitialisé.`r`n"
+        }
+
+        if ($browsers) {
+            $log += "[>>] Nettoyage des caches de navigateurs (Chrome, Edge, Firefox)...`r`n"
+            $local = $env:LOCALAPPDATA
+            $roaming = $env:APPDATA
+            $browserPaths = @(
+                "$local\Google\Chrome\User Data\Default\Cache",
+                "$local\Microsoft\Edge\User Data\Default\Cache",
+                "$roaming\Mozilla\Firefox\Profiles"
+            )
+            foreach ($bp in $browserPaths) {
+                if (Test-Path $bp) {
+                    if ($bp -like "*Firefox*") {
+                        # Supprimer cache dans chaque profil Firefox
+                        Get-ChildItem -Path $bp -Directory | ForEach-Object {
+                            $cacheDir = Join-Path $_.FullName "cache2"
+                            if (Test-Path $cacheDir) { Remove-Item -Path $cacheDir -Recurse -Force -ErrorAction SilentlyContinue }
+                        }
+                    } else {
+                        Get-ChildItem -Path $bp -Recurse -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+                    }
+                }
+            }
+            $log += "[OK] Caches des navigateurs purgés.`r`n"
+        }
+
+        $log += "[FIN] Opération de nettoyage terminée !`r`n"
+        return $log
+    } | Receive-Job -Wait -AutoRemoveJob | ForEach-Object {
+        $WPF_TxtLogClean.Text = $_
+    }
+})
+
+
+# --- ONGLET 3 : REPARATIONS ---
+function Log-Repair ($msg) {
+    $WPF_TxtLogRepair.Dispatcher.Invoke([Action[string]]{
+        param($m) $WPF_TxtLogRepair.AppendText("$m`r`n")
+        $WPF_TxtLogRepair.ScrollToEnd()
+    }, $msg)
+}
+
+# SFC
+$WPF_BtnRunSFC.Add_Click({
+    $WPF_TxtLogRepair.Text = "Lancement de SFC /scannow (ceci peut prendre plusieurs minutes)...`r`n"
+    Start-ThreadJob {
+        $process = Start-Process sfc.exe -ArgumentList "/scannow" -NoNewWindow -Wait -PassThru
+        return $process.ExitCode
+    } | Receive-Job -Wait -AutoRemoveJob | ForEach-Object {
+        Log-Repair "[OK] SFC terminé avec le code : $_"
+    }
+})
+
+# DISM
+$WPF_BtnRunDISM.Add_Click({
+    $WPF_TxtLogRepair.Text = "Lancement de DISM RestoreHealth (connexion Internet requise)...`r`n"
+    Start-ThreadJob {
+        $process = Start-Process dism.exe -ArgumentList "/Online /Cleanup-Image /RestoreHealth" -NoNewWindow -Wait -PassThru
+        return $process.ExitCode
+    } | Receive-Job -Wait -AutoRemoveJob | ForEach-Object {
+        Log-Repair "[OK] DISM terminé avec le code : $_"
+    }
+})
+
+# Windows Update Service Full Reset
+$WPF_BtnFixWU.Add_Click({
+    $WPF_TxtLogRepair.Text = "Lancement de la réinitialisation de Windows Update...`r`n"
+    Start-ThreadJob {
+        Stop-Service -Name wuauserv -Force -ErrorAction SilentlyContinue
+        Stop-Service -Name bits -Force -ErrorAction SilentlyContinue
+        Stop-Service -Name cryptsvc -Force -ErrorAction SilentlyContinue
+        Stop-Service -Name msiserver -Force -ErrorAction SilentlyContinue
+        
+        # Renommer les dossiers importants
+        $winDir = $env:SystemRoot
+        if (Test-Path "$winDir\SoftwareDistribution") {
+            Remove-Item -Path "$winDir\SoftwareDistribution.old" -Recurse -Force -ErrorAction SilentlyContinue
+            Rename-Item -Path "$winDir\SoftwareDistribution" -NewName "SoftwareDistribution.old" -ErrorAction SilentlyContinue
+        }
+        if (Test-Path "$winDir\System32\catroot2") {
+            Remove-Item -Path "$winDir\System32\catroot2.old" -Recurse -Force -ErrorAction SilentlyContinue
+            Rename-Item -Path "$winDir\System32\catroot2" -NewName "catroot2.old" -ErrorAction SilentlyContinue
+        }
+
+        # Réinitialiser les descripteurs de sécurité de service
+        sc.exe sdset wuauserv "D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;AU)(A;;CCLCSWRPWPDTLOCRRC;;;PU)" | Out-Null
+        sc.exe sdset bits "D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;AU)(A;;CCLCSWRPWPDTLOCRRC;;;PU)" | Out-Null
+
+        # Redémarrer les services
+        Start-Service -Name wuauserv -ErrorAction SilentlyContinue
+        Start-Service -Name bits -ErrorAction SilentlyContinue
+        Start-Service -Name cryptsvc -ErrorAction SilentlyContinue
+        Start-Service -Name msiserver -ErrorAction SilentlyContinue
+        return "Windows Update réinitialisé avec succès (Dossiers SoftwareDistribution/catroot2 renommés en .old)."
+    } | Receive-Job -Wait -AutoRemoveJob | ForEach-Object {
+        Log-Repair "[OK] $_"
+    }
+})
+
+# Network Reset
+$WPF_BtnResetNetwork.Add_Click({
+    $WPF_TxtLogRepair.Text = "Réinitialisation des protocoles réseau en cours...`r`n"
+    Start-ThreadJob {
+        $log = ""
+        $log += "Flush DNS... " + (ipconfig /flushdns) + "`r`n"
+        $log += "Winsock Reset... " + (netsh winsock reset) + "`r`n"
+        $log += "IP Reset... " + (netsh int ip reset) + "`r`n"
+        return $log
+    } | Receive-Job -Wait -AutoRemoveJob | ForEach-Object {
+        Log-Repair $_
+        Log-Repair "[OK] Réinitialisation réseau effectuée. Un redémarrage peut être nécessaire."
+    }
+})
+
+# Audit Tasks
+$WPF_BtnAuditTasks.Add_Click({
+    $WPF_TxtLogRepair.Text = "Audit des tâches planifiées non Microsoft / suspectes...`r`n"
+    Start-ThreadJob {
+        # Rechercher les tâches qui ne proviennent pas de Microsoft
+        $tasks = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "\Microsoft*" }
+        $result = ""
+        foreach ($t in $tasks) {
+            $result += "Nom : $($t.TaskName) | Chemin : $($t.TaskPath) | Statut : $($t.State)`r`n"
+        }
+        if ([string]::IsNullOrEmpty($result)) { $result = "Aucune tâche suspecte / tierce trouvée." }
+        return $result
+    } | Receive-Job -Wait -AutoRemoveJob | ForEach-Object {
+        Log-Repair $_
+    }
+})
+
+
+# --- ONGLET 4 : SAUVEGARDE ---
+# Lancer Fab's AutoBackup
+$WPF_BtnRunFAB.Add_Click({
+    $fabExe = Join-Path $Config.ToolsPath "FAB\AutoBackup7Pro.exe"
+    if (Test-Path $fabExe) {
+        Start-Process $fabExe
+    }
+})
+
+# Sauvegarde Native alternative
+$WPF_BtnRunNativeBackup.Add_Click({
+    $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+    $dialog.Description = "Sélectionnez le dossier de destination pour la sauvegarde rapide"
+    if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+        $dest = $dialog.SelectedPath
+        $userProfile = $env:USERPROFILE
+        
+        # Dossiers sources
+        $folders = @("Documents", "Desktop", "Favorites", "Pictures", "Downloads")
+        
+        Start-ThreadJob -ArgumentList $dest, $userProfile, $folders {
+            param($d, $up, $f)
+            $log = ""
+            foreach ($folder in $f) {
+                $src = Join-Path $up $folder
+                $target = Join-Path $d $folder
+                if (Test-Path $src) {
+                    $log += "Copie de $folder vers la destination...`r`n"
+                    Copy-Item -Path $src -Destination $target -Recurse -Force -ErrorAction SilentlyContinue
+                }
+            }
+            return $log
+        } | Receive-Job -Wait -AutoRemoveJob | ForEach-Object {
+            [System.Windows.MessageBox]::Show("Sauvegarde native terminée :`r`n$_", "Sauvegarde Native", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
+        }
+    }
+})
+
+
+# --- ONGLET 5 : DRIVERS & OPTANE ---
+# Parcourir les drivers
+$WPF_BtnBrowseOptaneDrivers.Add_Click({
+    $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+    $dialog.Description = "Sélectionnez le dossier contenant les fichiers .inf des pilotes Intel RST/Optane"
+    if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+        $WPF_TxtOptaneDriverPath.Text = $dialog.SelectedPath
+    }
+})
+
+# Injection DISM
+$WPF_BtnRunOptaneInjection.Add_Click({
+    $windowsLetter = $WPF_TxtOptaneDrive.Text.Trim().TrimEnd(':').ToUpper()
+    $driverPath = $WPF_TxtOptaneDriverPath.Text.Trim()
+
+    if ($windowsLetter -notmatch '^[A-Z]$') {
+        [System.Windows.MessageBox]::Show("La lettre de lecteur doit être une seule lettre de A à Z.", "Entrée invalide", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+        return
+    }
+
+    $imagePath = "${windowsLetter}:\"
+    $system32Path = "${imagePath}Windows\System32"
+
+    if (-not (Test-Path $system32Path)) {
+        [System.Windows.MessageBox]::Show("Le dossier '$system32Path' est introuvable. Assurez-vous que cette lettre correspond bien à la partition Windows à modifier.", "Partition Windows introuvable", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+        return
+    }
+
+    if (-not (Test-Path $driverPath)) {
+        [System.Windows.MessageBox]::Show("Le dossier des pilotes spécifié est introuvable.", "Pilotes introuvables", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+        return
+    }
+
+    $WPF_TxtLogOptane.Text = "[>>] Préparation de l'injection des pilotes...`r`n"
+    $WPF_TxtLogOptane.AppendText("Cible : $imagePath`r`n")
+    $WPF_TxtLogOptane.AppendText("Pilotes : $driverPath`r`n`r`n")
+
+    Start-ThreadJob -ArgumentList $imagePath, $driverPath {
+        param($img, $drvs)
+        $process = Start-Process dism.exe -ArgumentList "/Image:$img /Add-Driver /Driver:`"$drvs`" /Recurse" -NoNewWindow -Wait -PassThru
+        return $process.ExitCode
+    } | Receive-Job -Wait -AutoRemoveJob | ForEach-Object {
+        if ($_ -eq 0) {
+            $WPF_TxtLogOptane.AppendText("[OK] Injection terminée avec succès (Code 0).`r`n")
+        } else {
+            $WPF_TxtLogOptane.AppendText("[!!] Erreur lors de l'injection DISM (Code: $_).`r`n")
+        }
+    }
+})
+
+
+# --- ONGLET 6 : OUTILS TIERS ---
+# Tron Script
+$WPF_BtnRunTron.Add_Click({
+    $tronDir = Get-ChildItem -Path $Config.ToolsPath -Directory -Filter "Tron*" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($tronDir) {
+        $tronBat = Join-Path $tronDir.FullName "tron\tron.bat"
+        if (Test-Path $tronBat) {
+            # Lancer dans une nouvelle fenêtre cmd en tant qu'admin
+            Start-Process cmd.exe -ArgumentList "/c `"$tronBat`"" -Verb RunAs
+        }
+    }
+})
+
+# Windows Repair Unlocked (Tweaking)
+$WPF_BtnRunTweaking.Add_Click({
+    $repairDir = Get-ChildItem -Path $Config.ToolsPath -Directory -Filter "*Repair*" -ErrorAction SilentlyContinue | 
+                  Where-Object { $_.Name -match "Windows Repair Unlocked" } | Select-Object -First 1
+    if ($repairDir) {
+        $repairExe = Join-Path $repairDir.FullName "Repair_Windows.exe"
+        if (Test-Path $repairExe) {
+            Start-Process $repairExe -Verb RunAs
+        }
+    }
+})
+
+# Portable Windows Repair Toolbox
+$WPF_BtnRunPWRT.Add_Click({
+    $toolboxDir = Get-ChildItem -Path $Config.ToolsPath -Directory -Filter "*Repair Toolbox*" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($toolboxDir) {
+        $toolboxExe = Get-ChildItem -Path $toolboxDir.FullName -Filter "*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($toolboxExe) {
+            Start-Process $toolboxExe.FullName -Verb RunAs
+        }
+    }
+})
+
+# Ouvrir services.msc
+$WPF_BtnOpenServices.Add_Click({
+    Start-Process services.msc
+})
+
+
+# --- Initialisation de la détection au démarrage ---
+if (-not [string]::IsNullOrEmpty($Config.ToolsPath)) {
+    if (Test-Path $Config.ToolsPath -ErrorAction SilentlyContinue) {
+        # Outils trouvés localement ou configurés à l'avance, ignorer l'overlay
+        Update-ToolStatuses $Config.ToolsPath
+        $WPF_PathSelectorOverlay.Visibility = [System.Windows.Visibility]::Collapsed
+        $WPF_MainAppLayout.Visibility = [System.Windows.Visibility]::Visible
+        Run-Diagnostics
+    }
+}
+
+# Lancer la boucle WPF
+$Form.ShowDialog() | Out-Null
