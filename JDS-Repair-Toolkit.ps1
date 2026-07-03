@@ -807,6 +807,7 @@ $WPF_BtnTabTools.Add_Click({ Show-Tab $WPF_GridTools })
 
 $GlobalAppsLookup = @{}
 $GlobalInstalledApps = @()
+$GlobalCheckedApps = @{}
 
 # Logger spécifique
 function Log-App ($msg) {
@@ -844,56 +845,105 @@ function Get-InstalledApps {
     return $apps | Sort-Object Name
 }
 
+# Créer un élément CheckBox pour un programme
+function New-AppCheckBox ($appName) {
+    $chk = New-Object System.Windows.Controls.CheckBox
+    $chk.Content = $appName
+    $chk.Foreground = [System.Windows.Media.Brushes]::White
+    $chk.Margin = "2"
+    
+    # Restaurer l'état coché si existant
+    if ($GlobalCheckedApps.ContainsKey($appName)) {
+        $chk.IsChecked = $GlobalCheckedApps[$appName]
+    } else {
+        $chk.IsChecked = $false
+    }
+    
+    # Écouter les changements d'état
+    $chk.add_Checked({
+        $GlobalCheckedApps[$appName] = $true
+    })
+    $chk.add_Unchecked({
+        $GlobalCheckedApps[$appName] = $false
+    })
+    
+    return $chk
+}
+
 # Remplir la liste WPF
 function Populate-InstalledApps {
     $WPF_TxtLogApps.Text = "Chargement de la liste des programmes installés...`r`n"
     $WPF_LstInstalledApps.Items.Clear()
     $GlobalAppsLookup.Clear()
+    $GlobalCheckedApps.Clear() # Vider les sélections précédentes lors d'un rafraîchissement complet
     
     $global:GlobalInstalledApps = Get-InstalledApps
     foreach ($app in $GlobalInstalledApps) {
         $GlobalAppsLookup[$app.Name] = $app.UninstallString
-        [void]$WPF_LstInstalledApps.Items.Add($app.Name)
+        $chk = New-AppCheckBox -appName $app.Name
+        [void]$WPF_LstInstalledApps.Items.Add($chk)
     }
     Log-App "[OK] $($GlobalInstalledApps.Count) programmes chargés."
 }
 
-# Lancer la désinstallation
+# Lancer la désinstallation séquentielle des programmes cochés
 $WPF_BtnUninstallApp.Add_Click({
-    $selected = $WPF_LstInstalledApps.SelectedItem
-    if (-not $selected) {
-        [System.Windows.MessageBox]::Show("Veuillez sélectionner un programme à désinstaller.", "Sélection vide", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+    $selectedApps = @()
+    foreach ($key in $GlobalCheckedApps.Keys) {
+        if ($GlobalCheckedApps[$key]) {
+            $selectedApps += $key
+        }
+    }
+
+    if ($selectedApps.Count -eq 0) {
+        [System.Windows.MessageBox]::Show("Veuillez cocher au moins un programme à désinstaller.", "Sélection vide", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
         return
     }
 
-    $uninstallString = $GlobalAppsLookup[$selected.ToString()]
-    if (-not $uninstallString) {
-        [System.Windows.MessageBox]::Show("Impossible de trouver la commande de désinstallation pour ce programme.", "Erreur", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
-        return
+    # Créer la liste des commandes à exécuter
+    $jobsList = @()
+    foreach ($name in $selectedApps) {
+        $cmd = $GlobalAppsLookup[$name]
+        if ($cmd) {
+            $jobsList += [PSCustomObject]@{
+                Name = $name
+                Cmd  = $cmd
+            }
+        }
     }
 
-    Log-App "[>>] Lancement du désinstalleur pour : $selected"
-    Log-App "Commande : $uninstallString"
+    Log-App "[>>] Début de la désinstallation en lot de $($jobsList.Count) programmes..."
     
-    Start-ThreadJob -ArgumentList $uninstallString {
-        param($cmd)
-        # Nettoyer les guillemets et arguments pour Start-Process
-        # Pour faire simple et robuste, on passe la commande à cmd.exe
-        $process = Start-Process cmd.exe -ArgumentList "/c `"$cmd`"" -Verb RunAs -Wait -PassThru
-        return $process.ExitCode
+    Start-ThreadJob -ArgumentList @(, $jobsList) {
+        param($items)
+        foreach ($item in $items) {
+            Write-Output "[>>] Désinstallation de : $($item.Name)"
+            Write-Output "Lancement de la commande : $($item.Cmd)"
+            try {
+                # Exécuter via cmd.exe en tant qu'admin et attendre la fermeture
+                $process = Start-Process cmd.exe -ArgumentList "/c `"$($item.Cmd)`"" -Verb RunAs -Wait -PassThru
+                Write-Output "[OK] Désinstallation de $($item.Name) terminée (Code de sortie : $($process.ExitCode))."
+            } catch {
+                Write-Output "[!!] Erreur lors du lancement pour $($item.Name) : $($_.Exception.Message)"
+            }
+        }
+        return "[FIN] Toutes les désinstallations sélectionnées sont terminées."
     } | Receive-Job -Wait -AutoRemoveJob | ForEach-Object {
-        Log-App "[OK] Processus de désinstallation fermé (Code : $_)."
-        Populate-InstalledApps
+        Log-App $_
     }
+    
+    # Rafraîchir après la fin de toutes les désinstallations
+    Populate-InstalledApps
 })
 
-# Filtrer la liste en temps réel
+# Filtrer la liste en temps réel (tout en préservant l'état des cases cochées)
 $WPF_TxtSearchApps.Add_TextChanged({
     $search = $WPF_TxtSearchApps.Text.Trim()
     $WPF_LstInstalledApps.Items.Clear()
     foreach ($app in $GlobalInstalledApps) {
         if ([string]::IsNullOrEmpty($search) -or $app.Name -like "*$search*") {
-            [void]$WPF_LstInstalledApps.Items.Add($app.Name)
+            $chk = New-AppCheckBox -appName $app.Name
+            [void]$WPF_LstInstalledApps.Items.Add($chk)
         }
     }
 })
