@@ -25,6 +25,21 @@ if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adm
 # Charger les assemblys requises pour WPF
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms, System.Drawing
 
+# Créer un alias ou une fonction de secours pour Start-ThreadJob s'il n'est pas disponible (ex: PowerShell 5.1 sans module ThreadJob)
+if (-not (Get-Command Start-ThreadJob -ErrorAction SilentlyContinue)) {
+    function Start-ThreadJob {
+        param(
+            [scriptblock]$ScriptBlock,
+            [object[]]$ArgumentList = @()
+        )
+        if ($ArgumentList.Count -gt 0) {
+            Start-Job -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
+        } else {
+            Start-Job -ScriptBlock $ScriptBlock
+        }
+    }
+}
+
 # Répertoire de travail
 $ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { $pwd.Path }
 $ConfigFile = Join-Path $ScriptDir "JDS-Repair-Toolkit-Config.json"
