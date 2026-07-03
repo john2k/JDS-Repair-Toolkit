@@ -590,6 +590,19 @@ function Update-ToolStatuses {
 
 # --- Actions de la sélection de chemin (Overlay) ---
 
+# Synchronisation entre la liste prédéfinie et le chemin personnalisé
+$WPF_TxtCustomPath.Add_TextChanged({
+    if (-not [string]::IsNullOrEmpty($WPF_TxtCustomPath.Text)) {
+        $WPF_LstPredefinedPaths.UnselectAll()
+    }
+})
+
+$WPF_LstPredefinedPaths.Add_SelectionChanged({
+    if ($WPF_LstPredefinedPaths.SelectedItem) {
+        $WPF_TxtCustomPath.Text = ""
+    }
+})
+
 # Parcourir localement
 $WPF_BtnBrowsePath.Add_Click({
     $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
@@ -604,13 +617,13 @@ $WPF_BtnBrowsePath.Add_Click({
 $WPF_BtnConfirmPath.Add_Click({
     $selectedPath = ""
     
-    # 1. Priorité à l'élément sélectionné dans la liste réseau
-    if ($WPF_LstPredefinedPaths.SelectedItem) {
-        $selectedPath = $WPF_LstPredefinedPaths.SelectedItem.ToString()
-    }
-    # 2. Sinon, chemin personnalisé
-    elseif (-not [string]::IsNullOrEmpty($WPF_TxtCustomPath.Text)) {
+    # 1. Priorité au chemin personnalisé s'il est rempli
+    if (-not [string]::IsNullOrEmpty($WPF_TxtCustomPath.Text)) {
         $selectedPath = $WPF_TxtCustomPath.Text
+    }
+    # 2. Sinon, l'élément sélectionné dans la liste réseau
+    elseif ($WPF_LstPredefinedPaths.SelectedItem) {
+        $selectedPath = $WPF_LstPredefinedPaths.SelectedItem.ToString()
     }
 
     if (-not [string]::IsNullOrEmpty($selectedPath)) {
