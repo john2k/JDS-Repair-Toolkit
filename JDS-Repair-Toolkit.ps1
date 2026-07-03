@@ -63,6 +63,7 @@ if ([string]::IsNullOrEmpty($Config.ToolsPath)) {
 
 # Chemins réseau pré-définis
 $PredefinedPaths = @(
+    "\\10.1.1.201\Clients\tools",
     "\\11.11.11.223\Tech\jds-toolbox",
     "\\192.168.1.100\Shared\JDS-Toolkit",
     "\\10.0.0.5\Public\Rescue-Tools"
