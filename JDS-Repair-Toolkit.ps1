@@ -1196,12 +1196,19 @@ function Populate-Downloads {
     $WPF_TxtProgressStatus.Text = "Chargement du catalogue des versions..."
     $WPF_LstDownloads.Items.Clear()
 
-    # Charger versions.json
-    $jsonPath = Join-Path $ScriptDir "versions.json"
-    if (Test-Path $jsonPath) {
-        $global:GlobalToolsList = Get-Content $jsonPath -Raw | ConvertFrom-Json
-    } else {
-        $WPF_TxtProgressStatus.Text = "Fichier versions.json local introuvable."
+    # Charger versions.json depuis GitHub en temps réel (évite le besoin d'un fichier local)
+    try {
+        $catalogUrl = "https://raw.githubusercontent.com/john2k/JDS-Repair-Toolkit/main/versions.json?t=" + [DateTime]::Now.Ticks
+        $wc = New-Object System.Net.WebClient
+        $wc.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+        # Bypasser les vérifications SSL en cas de problème sur les vieux systèmes
+        [System.Net.ServicePointManager]::SecurityProtocol = 3072 -bor 12288 -bor 768
+        [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+        
+        $jsonContent = $wc.DownloadString($catalogUrl)
+        $global:GlobalToolsList = $jsonContent | ConvertFrom-Json
+    } catch {
+        $WPF_TxtProgressStatus.Text = "Échec du chargement du catalogue en ligne : $($_.Exception.Message)"
         return
     }
 
