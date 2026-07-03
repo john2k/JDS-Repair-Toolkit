@@ -184,6 +184,7 @@ $PredefinedPaths = @(
                     <Button Name="BtnTabBackup" Style="{StaticResource SidebarButton}" Content="💾  Sauvegarde (FAB)"/>
                     <Button Name="BtnTabOptane" Style="{StaticResource SidebarButton}" Content="⚙️  Pilotes / Optane"/>
                     <Button Name="BtnTabTools" Style="{StaticResource SidebarButton}" Content="🧰  Outils Tiers"/>
+                    <Button Name="BtnTabDownloads" Style="{StaticResource SidebarButton}" Content="📥  Téléchargements"/>
                 </StackPanel>
 
                 <!-- Status / Version footer -->
@@ -618,6 +619,52 @@ $PredefinedPaths = @(
                     <!-- Terminal de logs pour les applications -->
                     <TextBox Grid.Row="2" Name="TxtLogApps" Height="100" Background="#121216" Foreground="#00FF00" FontFamily="Consolas" FontSize="12" IsReadOnly="True" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" Text="Prêt..." BorderThickness="1" BorderBrush="#333333" Margin="0,15,0,0"/>
                 </Grid>
+
+                <!-- Onglet TELECHARGEMENTS PERSISTANTS -->
+                <Grid Name="GridDownloads" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- En-tête -->
+                    <Grid Grid.Row="0" Margin="0,0,0,15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Gestionnaire de Téléchargements" FontSize="22" FontWeight="Bold" Foreground="White"/>
+                            <TextBlock Text="Téléchargez et mettez à jour de façon persistante vos outils dans votre dossier de boîte à outils." Foreground="#AAAAAA" FontSize="11" Margin="0,5,0,0"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Name="BtnRefreshDownloads" Style="{StaticResource SecondaryButton}" Content="Rafraîchir les versions" Height="30" Padding="15,0,15,0" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- Liste des outils -->
+                    <ListBox Grid.Row="1" Name="LstDownloads" Background="#1E1E24" BorderBrush="#444455" BorderThickness="1" Padding="5"/>
+
+                    <!-- Barre de progression de téléchargement -->
+                    <Border Grid.Row="2" Background="#252530" CornerRadius="5" Padding="15" Margin="0,15,0,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Grid Grid.Row="0" Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Name="TxtProgressStatus" Text="Sélectionnez un outil pour démarrer..." Foreground="#CCCCCC" FontSize="12"/>
+                                <TextBlock Grid.Column="1" Name="TxtProgressSpeed" Text="" Foreground="#00D2C4" FontSize="12" FontWeight="Bold"/>
+                            </Grid>
+
+                            <ProgressBar Grid.Row="1" Name="ProgressDownload" Height="15" Background="#1A1A22" Foreground="#00D2C4" BorderThickness="0"/>
+                        </Grid>
+                    </Border>
+                </Grid>
             </Grid>
         </Grid>
 
@@ -838,7 +885,7 @@ $WPF_BtnChangePath.Add_Click({
 })
 
 # --- Logique de navigation des onglets ---
-$Grids = @($WPF_GridDiag, $WPF_GridClean, $WPF_GridRepair, $WPF_GridApps, $WPF_GridBackup, $WPF_GridOptane, $WPF_GridTools)
+$Grids = @($WPF_GridDiag, $WPF_GridClean, $WPF_GridRepair, $WPF_GridApps, $WPF_GridBackup, $WPF_GridOptane, $WPF_GridTools, $WPF_GridDownloads)
 
 function Show-Tab ($activeGrid) {
     foreach ($grid in $Grids) {
@@ -862,6 +909,10 @@ $WPF_BtnTabApps.Add_Click({
 $WPF_BtnTabBackup.Add_Click({ Show-Tab $WPF_GridBackup })
 $WPF_BtnTabOptane.Add_Click({ Show-Tab $WPF_GridOptane })
 $WPF_BtnTabTools.Add_Click({ Show-Tab $WPF_GridTools })
+$WPF_BtnTabDownloads.Add_Click({ 
+    Show-Tab $WPF_GridDownloads
+    Populate-Downloads
+})
 
 # --- LOGIQUE ONGLET : SCANNERS & DESINSTALLATION ---
 
@@ -1103,6 +1154,265 @@ $WPF_BtnRunRogue.Add_Click({
 # Malwarebytes (Installer)
 $WPF_BtnRunMBAM.Add_Click({
     Start-DisposableScanner -Name "MalwarebytesInstaller" -Url "https://downloads.malwarebytes.com/file/mb4_offline"
+})
+
+
+# --- LOGIQUE ONGLET : TELECHARGEMENTS PERSISTANTS ---
+
+$GlobalToolsList = @()
+
+# Extraire la version locale de l'exécutable
+function Get-LocalToolVersion ($filePath) {
+    if (Test-Path $filePath) {
+        try {
+            $info = (Get-Item $filePath).VersionInfo
+            if ($info.ProductVersion) {
+                return $info.ProductVersion.Trim()
+            } elseif ($info.FileVersion) {
+                return $info.FileVersion.Trim()
+            } else {
+                return "Présent"
+            }
+        } catch {
+            return "Présent"
+        }
+    }
+    return "Absent"
+}
+
+# Charger le catalogue et remplir la liste des téléchargements
+function Populate-Downloads {
+    if ([string]::IsNullOrEmpty($Config.ToolsPath)) {
+        $WPF_LstDownloads.Items.Clear()
+        $lbl = New-Object System.Windows.Controls.Label
+        $lbl.Content = "Veuillez sélectionner un dossier racine valide pour les outils dans la sidebar."
+        $lbl.Foreground = [System.Windows.Media.Brushes]::Red
+        $lbl.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Center
+        $lbl.Margin = 20
+        [void]$WPF_LstDownloads.Items.Add($lbl)
+        return
+    }
+
+    $WPF_TxtProgressStatus.Text = "Chargement du catalogue des versions..."
+    $WPF_LstDownloads.Items.Clear()
+
+    # Charger versions.json
+    $jsonPath = Join-Path $ScriptDir "versions.json"
+    if (Test-Path $jsonPath) {
+        $global:GlobalToolsList = Get-Content $jsonPath -Raw | ConvertFrom-Json
+    } else {
+        $WPF_TxtProgressStatus.Text = "Fichier versions.json local introuvable."
+        return
+    }
+
+    $WPF_TxtProgressStatus.Text = "Analyse des fichiers locaux et comparaison..."
+
+    foreach ($tool in $global:GlobalToolsList) {
+        $dirPath = Join-Path $Config.ToolsPath "Logiciels\$($tool.folder)"
+        $filename = $tool.filename
+        $localFile = Join-Path $dirPath $filename
+        $localVer = Get-LocalToolVersion -filePath $localFile
+        
+        $statusText = ""
+        $colorBrush = $null
+        $btnText = ""
+        $btnEnabled = $true
+
+        if ($localVer -eq "Absent") {
+            $statusText = "Non installé"
+            $colorBrush = [System.Windows.Media.Brushes]::Red
+            $btnText = "Télécharger"
+        } else {
+            if ($localVer -eq $tool.version) {
+                $statusText = "À jour"
+                $colorBrush = [System.Windows.Media.Brushes]::LightGreen
+                $btnText = "Réinstaller"
+            } else {
+                $statusText = "Mise à jour disponible"
+                $colorBrush = [System.Windows.Media.Brushes]::Orange
+                $btnText = "Mettre à jour"
+            }
+        }
+
+        # Créer le template WPF programmatiquement
+        $itemGrid = New-Object System.Windows.Controls.Grid
+        $itemGrid.Margin = "5"
+        
+        $col0 = New-Object System.Windows.Controls.ColumnDefinition; $col0.Width = New-Object System.Windows.GridLength(320); $itemGrid.ColumnDefinitions.Add($col0)
+        $col1 = New-Object System.Windows.Controls.ColumnDefinition; $col1.Width = New-Object System.Windows.GridLength(180); $itemGrid.ColumnDefinitions.Add($col1)
+        $col2 = New-Object System.Windows.Controls.ColumnDefinition; $col2.Width = New-Object System.Windows.GridLength(150); $itemGrid.ColumnDefinitions.Add($col2)
+        $col3 = New-Object System.Windows.Controls.ColumnDefinition; $col3.Width = New-Object System.Windows.GridLength([System.Windows.GridLength]::Auto); $itemGrid.ColumnDefinitions.Add($col3)
+
+        # Name block
+        $spName = New-Object System.Windows.Controls.StackPanel
+        $txtName = New-Object System.Windows.Controls.TextBlock; $txtName.Text = $tool.name; $txtName.FontWeight = [System.Windows.FontWeights]::Bold; $txtName.Foreground = [System.Windows.Media.Brushes]::White; $txtName.FontSize = 13
+        $txtCat = New-Object System.Windows.Controls.TextBlock; $txtCat.Text = $tool.category; $txtCat.Foreground = [System.Windows.Media.Brushes]::Gray; $txtCat.FontSize = 10; $txtCat.Margin = "0,2,0,0"
+        $spName.Children.Add($txtName) | Out-Null
+        $spName.Children.Add($txtCat) | Out-Null
+        [System.Windows.Controls.Grid]::SetColumn($spName, 0)
+        $itemGrid.Children.Add($spName) | Out-Null
+
+        # Version block
+        $spVer = New-Object System.Windows.Controls.StackPanel
+        $txtLocalVer = New-Object System.Windows.Controls.TextBlock; $txtLocalVer.Text = "Local : $localVer"; $txtLocalVer.Foreground = [System.Windows.Media.Brushes]::LightGray; $txtLocalVer.FontSize = 11
+        $txtRemoteVer = New-Object System.Windows.Controls.TextBlock; $txtRemoteVer.Text = "Distant : $($tool.version)"; $txtRemoteVer.Foreground = [System.Windows.Media.Brushes]::Gray; $txtRemoteVer.FontSize = 11; $txtRemoteVer.Margin = "0,2,0,0"
+        $spVer.Children.Add($txtLocalVer) | Out-Null
+        $spVer.Children.Add($txtRemoteVer) | Out-Null
+        [System.Windows.Controls.Grid]::SetColumn($spVer, 1)
+        $itemGrid.Children.Add($spVer) | Out-Null
+
+        # Status block
+        $spStatus = New-Object System.Windows.Controls.StackPanel
+        $spStatus.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+        $spStatus.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+        
+        $pastille = New-Object System.Windows.Controls.Border
+        $pastille.Width = 10; $pastille.Height = 10; $pastille.CornerRadius = New-Object System.Windows.CornerRadius(5)
+        $pastille.Background = $colorBrush; $pastille.Margin = "0,0,8,0"
+        
+        $txtStatus = New-Object System.Windows.Controls.TextBlock
+        $txtStatus.Text = $statusText; $txtStatus.Foreground = $colorBrush; $txtStatus.FontSize = 11; $txtStatus.FontWeight = [System.Windows.FontWeights]::SemiBold
+        
+        $spStatus.Children.Add($pastille) | Out-Null
+        $spStatus.Children.Add($txtStatus) | Out-Null
+        [System.Windows.Controls.Grid]::SetColumn($spStatus, 2)
+        $itemGrid.Children.Add($spStatus) | Out-Null
+
+        # Action Button
+        $btnAction = New-Object System.Windows.Controls.Button
+        $btnAction.Content = $btnText
+        $btnAction.Width = 110; $btnAction.Height = 24; $btnAction.IsEnabled = $btnEnabled
+        $btnAction.FontWeight = [System.Windows.FontWeights]::Bold; $btnAction.FontSize = 11; $btnAction.Cursor = [System.Windows.Input.Cursors]::Hand
+        
+        if ($statusText -eq "À jour") {
+            $btnAction.Background = [System.Windows.Media.BrushConverter]::ConvertFromString("#2D3748")
+            $btnAction.Foreground = [System.Windows.Media.Brushes]::LightGray
+        } else {
+            $btnAction.Background = [System.Windows.Media.BrushConverter]::ConvertFromString("#00adb5")
+            $btnAction.Foreground = [System.Windows.Media.Brushes]::White
+        }
+
+        # Liaison événement Clic avec fermeture
+        $toolId = $tool.id
+        $btnAction.Add_Click({
+            Download-PersistentTool -ToolId $toolId
+        }.GetNewClosure())
+
+        [System.Windows.Controls.Grid]::SetColumn($btnAction, 3)
+        $itemGrid.Children.Add($btnAction) | Out-Null
+
+        # Border wrapper
+        $itemBorder = New-Object System.Windows.Controls.Border
+        $itemBorder.Background = [System.Windows.Media.BrushConverter]::ConvertFromString("#252530")
+        $itemBorder.CornerRadius = New-Object System.Windows.CornerRadius(4)
+        $itemBorder.Padding = New-Object System.Windows.Thickness(8)
+        $itemBorder.Margin = New-Object System.Windows.Thickness(0,0,0,6)
+        $itemBorder.Child = $itemGrid
+        [void]$WPF_LstDownloads.Items.Add($itemBorder)
+    }
+
+    $WPF_TxtProgressStatus.Text = "Prêt (Tous les statuts de version chargés)."
+}
+
+# Lancer le téléchargement asynchrone non-bloquant de l'outil
+function Download-PersistentTool {
+    param(
+        [string]$ToolId
+    )
+
+    $tool = $global:GlobalToolsList | Where-Object { $_.id -eq $ToolId }
+    if (-not $tool) { return }
+
+    # Préparer les répertoires de stockage (Logiciels\NomOutil)
+    $dirPath = Join-Path $Config.ToolsPath "Logiciels\$($tool.folder)"
+    if (-not (Test-Path $dirPath)) {
+        New-Item -ItemType Directory -Path $dirPath -Force | Out-Null
+    }
+
+    # Déterminer si zip ou exe
+    $url = $tool.url
+    $extension = ".exe"
+    if ($url -match "\.zip") {
+        $extension = ".zip"
+    }
+    
+    $tempFileName = "$($tool.id)$extension"
+    $tempFilePath = Join-Path $dirPath $tempFileName
+
+    $WPF_TxtProgressStatus.Text = "Préparation du téléchargement de $($tool.name)..."
+    $WPF_TxtProgressSpeed.Text = "0.00 MB/s"
+    $WPF_ProgressDownload.Value = 0
+
+    $global:DownloadStartTime = [DateTime]::Now
+
+    # WebClient avec événements
+    $webClient = New-Object System.Net.WebClient
+    $webClient.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    
+    # Configuration TLS & SSL
+    [System.Net.ServicePointManager]::SecurityProtocol = 3072 -bor 12288 -bor 768
+    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+
+    # Événement de progression du téléchargement
+    $webClient.add_DownloadProgressChanged({
+        param($sender, $e)
+        $WPF_ProgressDownload.Dispatcher.Invoke([Action]{
+            $WPF_ProgressDownload.Value = $e.ProgressPercentage
+            $received = ($e.BytesReceived / 1MB).ToString("F1")
+            $total = ($e.TotalBytesToReceive / 1MB).ToString("F1")
+            $WPF_TxtProgressStatus.Text = "Téléchargement de $($tool.name) : $received MB / $total MB ($($e.ProgressPercentage)%)"
+            
+            $elapsed = ([DateTime]::Now - $global:DownloadStartTime).TotalSeconds
+            if ($elapsed -gt 0.1) {
+                $speedVal = ($e.BytesReceived / $elapsed) / 1MB
+                $WPF_TxtProgressSpeed.Text = "$($speedVal.ToString('F2')) MB/s"
+            }
+        })
+    })
+
+    # Événement de fin de téléchargement (avec extraction ZIP si nécessaire)
+    $webClient.add_DownloadFileCompleted({
+        param($sender, $e)
+        $WPF_ProgressDownload.Dispatcher.Invoke([Action]{
+            if ($e.Error) {
+                $WPF_TxtProgressStatus.Text = "Erreur de téléchargement : $($e.Error.Message)"
+                $WPF_TxtProgressSpeed.Text = ""
+                $WPF_ProgressDownload.Value = 0
+                if (Test-Path $tempFilePath) { Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue }
+            } else {
+                if ($tempFilePath.EndsWith(".zip")) {
+                    $WPF_TxtProgressStatus.Text = "Extraction de l'archive ZIP de $($tool.name)..."
+                    $WPF_TxtProgressSpeed.Text = ""
+                    try {
+                        Expand-Archive -Path $tempFilePath -DestinationPath $dirPath -Force
+                        Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue
+                        $WPF_TxtProgressStatus.Text = "Téléchargement et extraction de $($tool.name) terminés !"
+                    } catch {
+                        $WPF_TxtProgressStatus.Text = "Erreur d'extraction ZIP : $($_.Exception.Message)"
+                    }
+                } else {
+                    $WPF_TxtProgressStatus.Text = "Téléchargement de $($tool.name) terminé !"
+                    $WPF_TxtProgressSpeed.Text = ""
+                }
+                $WPF_ProgressDownload.Value = 100
+                Populate-Downloads
+            }
+        })
+    })
+
+    # Lancement du téléchargement asynchrone non-bloquant
+    try {
+        $uri = New-Object System.Uri($url)
+        $webClient.DownloadFileAsync($uri, $tempFilePath)
+    } catch {
+        $WPF_TxtProgressStatus.Text = "Erreur de lancement : $($_.Exception.Message)"
+        $WPF_TxtProgressSpeed.Text = ""
+    }
+}
+
+# Événements bouton rafraîchir
+$WPF_BtnRefreshDownloads.Add_Click({
+    Populate-Downloads
 })
 
 
