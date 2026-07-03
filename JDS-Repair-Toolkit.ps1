@@ -150,6 +150,7 @@ $PredefinedPaths = @(
                     <Button Name="BtnTabDiag" Style="{StaticResource SidebarButton}" Content="🩺  Diagnostics"/>
                     <Button Name="BtnTabClean" Style="{StaticResource SidebarButton}" Content="🧹  Nettoyage"/>
                     <Button Name="BtnTabRepair" Style="{StaticResource SidebarButton}" Content="🛠️  Réparations"/>
+                    <Button Name="BtnTabApps" Style="{StaticResource SidebarButton}" Content="🦠  Scanners &amp; Désins."/>
                     <Button Name="BtnTabBackup" Style="{StaticResource SidebarButton}" Content="💾  Sauvegarde (FAB)"/>
                     <Button Name="BtnTabOptane" Style="{StaticResource SidebarButton}" Content="⚙️  Pilotes / Optane"/>
                     <Button Name="BtnTabTools" Style="{StaticResource SidebarButton}" Content="🧰  Outils Tiers"/>
@@ -447,6 +448,116 @@ $PredefinedPaths = @(
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>
+
+                <!-- Onglet SCANNERS & DESINSTALL. -->
+                <Grid Name="GridApps" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="Scanners Jetables &amp; Désinstallation" FontSize="22" FontWeight="Bold" Foreground="White" Margin="0,0,0,15"/>
+                    
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="380"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Scanners Jetables (Left) -->
+                        <Border Grid.Column="0" Background="#252530" CornerRadius="5" Padding="15" Margin="0,0,10,0">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <StackPanel Grid.Row="0">
+                                    <TextBlock Text="🦠 Scanners Jetables" FontSize="16" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,5"/>
+                                    <TextBlock Text="Télécharge, lance et supprime automatiquement l'exécutable à la fermeture pour laisser le PC propre." Foreground="#AAAAAA" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,15"/>
+                                </StackPanel>
+                                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel>
+                                        <!-- KVRT -->
+                                        <Border Background="#1E1E24" CornerRadius="4" Padding="10" Margin="0,0,0,10">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="Kaspersky (KVRT)" FontWeight="Bold" Foreground="White"/>
+                                                    <TextBlock Text="Désinfection complète sans installation" Foreground="#888888" FontSize="10"/>
+                                                </StackPanel>
+                                                <Button Grid.Column="1" Name="BtnRunKVRT" Style="{StaticResource ModernButton}" Content="Lancer" Width="70" Height="25" Padding="0"/>
+                                            </Grid>
+                                        </Border>
+                                        
+                                        <!-- AdwCleaner -->
+                                        <Border Background="#1E1E24" CornerRadius="4" Padding="10" Margin="0,0,0,10">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="AdwCleaner" FontWeight="Bold" Foreground="White"/>
+                                                    <TextBlock Text="Suppression adware et barres d'outils" Foreground="#888888" FontSize="10"/>
+                                                </StackPanel>
+                                                <Button Grid.Column="1" Name="BtnRunAdw" Style="{StaticResource ModernButton}" Content="Lancer" Width="70" Height="25" Padding="0"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- ESET Online Scanner -->
+                                        <Border Background="#1E1E24" CornerRadius="4" Padding="10" Margin="0,0,0,10">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="ESET Online Scanner" FontWeight="Bold" Foreground="White"/>
+                                                    <TextBlock Text="Scanner cloud ESET puissant" Foreground="#888888" FontSize="10"/>
+                                                </StackPanel>
+                                                <Button Grid.Column="1" Name="BtnRunEset" Style="{StaticResource ModernButton}" Content="Lancer" Width="70" Height="25" Padding="0"/>
+                                            </Grid>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+
+                        <!-- Désinstalleur (Right) -->
+                        <Border Grid.Column="1" Background="#252530" CornerRadius="5" Padding="15" Margin="10,0,0,0">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                                    <TextBlock Text="🗑️ Désinstalleur Express" FontSize="16" FontWeight="Bold" Foreground="#00D2C4" Margin="0,0,0,5"/>
+                                    <!-- Search box -->
+                                    <Grid Margin="0,5,0,5">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0" Name="TxtSearchApps" Height="25" Background="#1E1E24" Foreground="White" VerticalContentAlignment="Center" BorderBrush="#444455" Padding="5,0,5,0"/>
+                                        <Button Grid.Column="1" Name="BtnRefreshApps" Style="{StaticResource SecondaryButton}" Content="Rafraîchir" Height="25" Margin="10,0,0,0" Padding="10,0,10,0"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <!-- List of apps -->
+                                <ListBox Grid.Row="1" Name="LstInstalledApps" Background="#1E1E24" Foreground="White" BorderBrush="#444455" Margin="0,0,0,10"/>
+
+                                <Button Grid.Row="2" Name="BtnUninstallApp" Style="{StaticResource ModernButton}" Content="Désinstaller le programme sélectionné" HorizontalAlignment="Right" Width="260"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <!-- Terminal de logs pour les applications -->
+                    <TextBox Grid.Row="2" Name="TxtLogApps" Height="100" Background="#121216" Foreground="#00FF00" FontFamily="Consolas" FontSize="12" IsReadOnly="True" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" Text="Prêt..." BorderThickness="1" BorderBrush="#333333" Margin="0,15,0,0"/>
+                </Grid>
             </Grid>
         </Grid>
 
@@ -665,7 +776,7 @@ $WPF_BtnChangePath.Add_Click({
 })
 
 # --- Logique de navigation des onglets ---
-$Grids = @($WPF_GridDiag, $WPF_GridClean, $WPF_GridRepair, $WPF_GridBackup, $WPF_GridOptane, $WPF_GridTools)
+$Grids = @($WPF_GridDiag, $WPF_GridClean, $WPF_GridRepair, $WPF_GridApps, $WPF_GridBackup, $WPF_GridOptane, $WPF_GridTools)
 
 function Show-Tab ($activeGrid) {
     foreach ($grid in $Grids) {
@@ -680,9 +791,192 @@ function Show-Tab ($activeGrid) {
 $WPF_BtnTabDiag.Add_Click({ Show-Tab $WPF_GridDiag })
 $WPF_BtnTabClean.Add_Click({ Show-Tab $WPF_GridClean })
 $WPF_BtnTabRepair.Add_Click({ Show-Tab $WPF_GridRepair })
+$WPF_BtnTabApps.Add_Click({ 
+    Show-Tab $WPF_GridApps 
+    if ($WPF_LstInstalledApps.Items.Count -eq 0) {
+        Populate-InstalledApps
+    }
+})
 $WPF_BtnTabBackup.Add_Click({ Show-Tab $WPF_GridBackup })
 $WPF_BtnTabOptane.Add_Click({ Show-Tab $WPF_GridOptane })
 $WPF_BtnTabTools.Add_Click({ Show-Tab $WPF_GridTools })
+
+# --- LOGIQUE ONGLET : SCANNERS & DESINSTALLATION ---
+
+$GlobalAppsLookup = @{}
+$GlobalInstalledApps = @()
+
+# Logger spécifique
+function Log-App ($msg) {
+    $WPF_TxtLogApps.Dispatcher.Invoke([Action[string]]{
+        param($m) $WPF_TxtLogApps.AppendText("$m`r`n")
+        $WPF_TxtLogApps.ScrollToEnd()
+    }, $msg)
+}
+
+# Récupérer la liste des programmes installés via le registre
+function Get-InstalledApps {
+    $apps = @()
+    $keys = @(
+        "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    )
+    foreach ($key in $keys) {
+        if (Test-Path (Split-Path $key)) {
+            $items = Get-ItemProperty -Path $key -ErrorAction SilentlyContinue
+            foreach ($item in $items) {
+                if ($item.DisplayName -and $item.SystemComponent -ne 1 -and $item.ParentKeyName -eq $null) {
+                    # Éviter les doublons
+                    if (-not ($apps | Where-Object { $_.Name -eq $item.DisplayName })) {
+                        $apps += [PSCustomObject]@{
+                            Name            = $item.DisplayName
+                            Version         = $item.DisplayVersion
+                            UninstallString = $item.UninstallString
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return $apps | Sort-Object Name
+}
+
+# Remplir la liste WPF
+function Populate-InstalledApps {
+    $WPF_TxtLogApps.Text = "Chargement de la liste des programmes installés...`r`n"
+    $WPF_LstInstalledApps.Items.Clear()
+    $GlobalAppsLookup.Clear()
+    
+    Start-ThreadJob {
+        return Get-InstalledApps
+    } | Receive-Job -Wait -AutoRemoveJob | ForEach-Object {
+        $global:GlobalInstalledApps = $_
+        foreach ($app in $GlobalInstalledApps) {
+            $GlobalAppsLookup[$app.Name] = $app.UninstallString
+            [void]$WPF_LstInstalledApps.Items.Add($app.Name)
+        }
+        Log-App "[OK] $($GlobalInstalledApps.Count) programmes chargés."
+    }
+}
+
+# Lancer la désinstallation
+$WPF_BtnUninstallApp.Add_Click({
+    $selected = $WPF_LstInstalledApps.SelectedItem
+    if (-not $selected) {
+        [System.Windows.MessageBox]::Show("Veuillez sélectionner un programme à désinstaller.", "Sélection vide", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+        return
+    }
+
+    $uninstallString = $GlobalAppsLookup[$selected.ToString()]
+    if (-not $uninstallString) {
+        [System.Windows.MessageBox]::Show("Impossible de trouver la commande de désinstallation pour ce programme.", "Erreur", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+        return
+    }
+
+    Log-App "[>>] Lancement du désinstalleur pour : $selected"
+    Log-App "Commande : $uninstallString"
+    
+    Start-ThreadJob -ArgumentList $uninstallString {
+        param($cmd)
+        # Nettoyer les guillemets et arguments pour Start-Process
+        # Pour faire simple et robuste, on passe la commande à cmd.exe
+        $process = Start-Process cmd.exe -ArgumentList "/c `"$cmd`"" -Verb RunAs -Wait -PassThru
+        return $process.ExitCode
+    } | Receive-Job -Wait -AutoRemoveJob | ForEach-Object {
+        Log-App "[OK] Processus de désinstallation fermé (Code : $_)."
+        Populate-InstalledApps
+    }
+})
+
+# Filtrer la liste en temps réel
+$WPF_TxtSearchApps.Add_TextChanged({
+    $search = $WPF_TxtSearchApps.Text.Trim()
+    $WPF_LstInstalledApps.Items.Clear()
+    foreach ($app in $GlobalInstalledApps) {
+        if ([string]::IsNullOrEmpty($search) -or $app.Name -like "*$search*") {
+            [void]$WPF_LstInstalledApps.Items.Add($app.Name)
+        }
+    }
+})
+
+# Rafraîchir la liste
+$WPF_BtnRefreshApps.Add_Click({
+    Populate-InstalledApps
+})
+
+# Fonction pour gérer les scanners jetables
+function Start-DisposableScanner {
+    param([string]$Name, [string]$Url)
+    
+    Log-App "[>>] Démarrage du processus pour $Name..."
+    
+    Start-ThreadJob -ArgumentList $Name, $Url {
+        param($n, $u)
+        
+        $tempDir = Join-Path $env:TEMP "JDS-Scanners"
+        if (-not (Test-Path $tempDir)) { 
+            New-Item -ItemType Directory -Path $tempDir -Force | Out-Null 
+        }
+        
+        $filePath = Join-Path $tempDir "$n.exe"
+        
+        # 1. Téléchargement
+        Log-App "[>>] Téléchargement de la dernière version de $n..."
+        try {
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            # Bypasser les vérifications SSL en cas de problème sur les vieux systèmes
+            [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
+            
+            $webClient = New-Object System.Net.WebClient
+            # Simuler un User Agent pour éviter le blocage de certains serveurs
+            $webClient.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            $webClient.DownloadFile($u, $filePath)
+        } catch {
+            return "[!!] Échec du téléchargement de $n : $($_.Exception.Message)"
+        }
+        
+        # 2. Exécution
+        Log-App "[>>] Lancement de $n (en tant qu'admin)..."
+        try {
+            $process = Start-Process -FilePath $filePath -Wait -PassThru -Verb RunAs
+            Log-App "[>>] $n est en cours d'exécution. En attente de la fermeture..."
+            $process.WaitForExit()
+            $code = $process.ExitCode
+        } catch {
+            # Nettoyer quand même si le lancement a échoué après création
+            if (Test-Path $filePath) { Remove-Item -Path $filePath -Force -ErrorAction SilentlyContinue }
+            return "[!!] Échec du lancement de $n : $($_.Exception.Message)"
+        }
+        
+        # 3. Suppression automatique
+        Log-App "[>>] Suppression du fichier temporaire de $n..."
+        if (Test-Path $filePath) {
+            # Petite pause pour libérer le descripteur de fichier si nécessaire
+            Start-Sleep -Seconds 2
+            Remove-Item -Path $filePath -Force -ErrorAction SilentlyContinue
+        }
+        
+        return "[OK] $n a été fermé et désinstallé (supprimé) avec succès. (Code de sortie : $code)"
+    } | Receive-Job -Wait -AutoRemoveJob | ForEach-Object {
+        Log-App $_
+    }
+}
+
+# KVRT
+$WPF_BtnRunKVRT.Add_Click({
+    Start-DisposableScanner -Name "KasperskyVirusRemovalTool" -Url "https://devbuilds.s.kaspersky-labs.com/devbuilds/KVRT/latest/full/KVRT.exe"
+})
+
+# AdwCleaner
+$WPF_BtnRunAdw.Add_Click({
+    Start-DisposableScanner -Name "AdwCleaner" -Url "https://downloads.malwarebytes.com/file/adwcleaner"
+})
+
+# ESET Online Scanner
+$WPF_BtnRunEset.Add_Click({
+    Start-DisposableScanner -Name "ESETOnlineScanner" -Url "https://download.eset.com/com/eset/tools/online_scanner/latest/esetonlinescanner_fra.exe"
+})
 
 
 # --- ONGLET 1 : DIAGNOSTICS ---
