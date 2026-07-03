@@ -1,0 +1,182 @@
+[
+  {
+    "id": "adwcleaner",
+    "name": "AdwCleaner",
+    "category": "Désinfection",
+    "folder": "AdwCleaner",
+    "filename": "AdwCleaner.exe",
+    "url": "https://downloads.malwarebytes.com/file/adwcleaner",
+    "version": "8.4.2"
+  },
+  {
+    "id": "kvrt",
+    "name": "Kaspersky KVRT",
+    "category": "Désinfection",
+    "folder": "KVRT",
+    "filename": "KVRT.exe",
+    "url": "https://devbuilds.s.kaspersky-labs.com/devbuilds/KVRT/latest/full/KVRT.exe",
+    "version": "2024.03"
+  },
+  {
+    "id": "eset",
+    "name": "ESET Online Scanner",
+    "category": "Désinfection",
+    "folder": "ESET",
+    "filename": "ESETOnlineScanner.exe",
+    "url": "https://download.eset.com/com/eset/tools/online_scanner/latest/esetonlinescanner_fra.exe",
+    "version": "3.5.6"
+  },
+  {
+    "id": "roguekiller",
+    "name": "RogueKiller",
+    "category": "Désinfection",
+    "folder": "RogueKiller",
+    "filename": "RogueKiller.exe",
+    "url": "https://download.adlice.com/api/?action=download&app=roguekiller&type=portable64",
+    "version": "15.13.0"
+  },
+  {
+    "id": "malwarebytes",
+    "name": "Malwarebytes Offline",
+    "category": "Désinfection",
+    "folder": "Malwarebytes",
+    "filename": "MalwarebytesSetup.exe",
+    "url": "https://downloads.malwarebytes.com/file/mb4_offline",
+    "version": "4.6.8"
+  },
+  {
+    "id": "crystaldiskinfo",
+    "name": "CrystalDiskInfo",
+    "category": "Diagnostics",
+    "folder": "CrystalDiskInfo",
+    "filename": "DiskInfo64.exe",
+    "url": "https://crystalmark.info/redirect.php?product=CrystalDiskInfoKureiKeiEdition",
+    "version": "9.2.2"
+  },
+  {
+    "id": "hwmonitor",
+    "name": "HWMonitor",
+    "category": "Diagnostics",
+    "folder": "HWMonitor",
+    "filename": "HWMonitor_x64.exe",
+    "url": "https://www.cpuid.com/downloads/hwmonitor/hwmonitor_1.52.zip",
+    "version": "1.52"
+  },
+  {
+    "id": "cpuz",
+    "name": "CPU-Z",
+    "category": "Diagnostics",
+    "folder": "CPU-Z",
+    "filename": "cpuz_x64.exe",
+    "url": "https://www.cpuid.com/downloads/cpu-z/cpu-z_2.09-en.zip",
+    "version": "2.09"
+  },
+  {
+    "id": "sdi",
+    "name": "Snappy Driver Installer",
+    "category": "Pilotes",
+    "folder": "SDI",
+    "filename": "SDI_x64.exe",
+    "url": "https://sdi-tool.org/SDILite.zip",
+    "version": "1.23.9"
+  },
+  {
+    "id": "winrar",
+    "name": "WinRAR",
+    "category": "Bureautique",
+    "folder": "WinRAR",
+    "filename": "winrar-x64.exe",
+    "url": "https://www.win-rar.com/fileadmin/winrar-beta/winrar-x64-624.exe",
+    "version": "6.24"
+  },
+  {
+    "id": "7zip",
+    "name": "7-Zip",
+    "category": "Bureautique",
+    "folder": "7-Zip",
+    "filename": "7z.exe",
+    "url": "https://www.7-zip.org/a/7z2301-x64.exe",
+    "version": "23.01"
+  },
+  {
+    "id": "flyby11",
+    "name": "Flyby11",
+    "category": "Système",
+    "folder": "Flyby11",
+    "filename": "Flyby11.exe",
+    "url": "https://github.com/belim/Flyby11/releases/download/0.85/Flyby11.zip",
+    "version": "0.85"
+  },
+  {
+    "id": "notepadplusplus",
+    "name": "Notepad++",
+    "category": "Bureautique",
+    "folder": "Notepad++",
+    "filename": "notepad++.exe",
+    "url": "https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.6.2/npp.8.6.2.Installer.x64.exe",
+    "version": "8.6.2"
+  },
+  {
+    "id": "advancedipscanner",
+    "name": "Advanced IP Scanner",
+    "category": "Réseau",
+    "folder": "AdvancedIPScanner",
+    "filename": "advanced_ip_scanner.exe",
+    "url": "https://download.advanced-ip-scanner.com/download/files/Advanced_IP_Scanner_2.5.4594.1.exe",
+    "version": "2.5.4594"
+  },
+  {
+    "id": "balenaetcher",
+    "name": "BalenaEtcher",
+    "category": "Système",
+    "folder": "BalenaEtcher",
+    "filename": "balenaEtcher.exe",
+    "url": "https://github.com/balena-io/etcher/releases/download/v1.18.11/balenaEtcher-1.18.11-x64.portable.exe",
+    "version": "1.18.11"
+  },
+  {
+    "id": "rufus",
+    "name": "Rufus",
+    "category": "Système",
+    "folder": "Rufus",
+    "filename": "rufus.exe",
+    "url": "https://github.com/pbatard/rufus/releases/download/v4.4/rufus-4.4p.exe",
+    "version": "4.4"
+  },
+  {
+    "id": "freefilesync",
+    "name": "FreeFileSync",
+    "category": "Bureautique",
+    "folder": "FreeFileSync",
+    "filename": "FreeFileSync_Setup.exe",
+    "url": "https://www.freefilesync.org/download/FreeFileSync_13.3_Windows_Setup.exe",
+    "version": "13.3"
+  },
+  {
+    "id": "adobereader",
+    "name": "Adobe Reader",
+    "category": "Bureautique",
+    "folder": "AdobeReader",
+    "filename": "AcrobatReader.exe",
+    "url": "https://ardownload2.adobe.com/pub/adobe/reader/win/AcrobatDC/2300820470/AcrobatReaderDC_fr_FR.exe",
+    "version": "23.008"
+  },
+  {
+    "id": "libreoffice",
+    "name": "LibreOffice",
+    "category": "Bureautique",
+    "folder": "LibreOffice",
+    "filename": "soffice.exe",
+    "url": "https://download.documentfoundation.org/libreoffice/stable/7.6.4/win/x86_64/LibreOffice_7.6.4_Win_x86-64.msi",
+    "version": "7.6.4"
+  },
+  {
+    "id": "openoffice",
+    "name": "OpenOffice",
+    "category": "Bureautique",
+    "folder": "OpenOffice",
+    "filename": "soffice.exe",
+    "url": "https://sourceforge.net/projects/openofficeorg.mirror/files/4.1.15/binaries/fr/Apache_OpenOffice_4.1.15_Win_x86_install_fr.exe/download",
+    "version": "4.1.15"
+  }
+]
