@@ -1197,18 +1197,17 @@ function Populate-Downloads {
     $WPF_LstDownloads.Items.Clear()
 
     # Charger versions.json depuis GitHub en temps réel (évite le besoin d'un fichier local)
+    # Charger versions.json depuis GitHub en temps réel (via curl.exe pour éviter les blocages SSL .NET)
     try {
         $catalogUrl = "https://raw.githubusercontent.com/john2k/JDS-Repair-Toolkit/main/versions.json?t=" + [DateTime]::Now.Ticks
-        $wc = New-Object System.Net.WebClient
-        $wc.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-        # Bypasser les vérifications SSL en cas de problème sur les vieux systèmes
-        [System.Net.ServicePointManager]::SecurityProtocol = 3072 -bor 12288 -bor 768
-        [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-        
-        $jsonContent = $wc.DownloadString($catalogUrl)
+        $curlOutput = & curl.exe -L -k -s $catalogUrl
+        $jsonContent = $curlOutput -join "`n"
+        if ([string]::IsNullOrEmpty($jsonContent) -or -not ($jsonContent.Trim().StartsWith("["))) {
+            throw "Réponse JSON invalide ou vide"
+        }
         $global:GlobalToolsList = $jsonContent | ConvertFrom-Json
     } catch {
-        $WPF_TxtProgressStatus.Text = "Échec du chargement du catalogue en ligne : $($_.Exception.Message)"
+        $WPF_TxtProgressStatus.Text = "Échec du chargement du catalogue via curl : $($_.Exception.Message)"
         return
     }
 
@@ -1321,7 +1320,7 @@ function Populate-Downloads {
     $WPF_TxtProgressStatus.Text = "Prêt (Tous les statuts de version chargés)."
 }
 
-# Lancer le téléchargement asynchrone non-bloquant de l'outil
+# Lancer le téléchargement asynchrone non-bloquant de l'outil via curl.exe avec suivi de taille
 function Download-PersistentTool {
     param(
         [string]$ToolId
@@ -1346,47 +1345,44 @@ function Download-PersistentTool {
     $tempFileName = "$($tool.id)$extension"
     $tempFilePath = Join-Path $dirPath $tempFileName
 
-    $WPF_TxtProgressStatus.Text = "Préparation du téléchargement de $($tool.name)..."
-    $WPF_TxtProgressSpeed.Text = "0.00 MB/s"
+    # Supprimer l'existant s'il y a lieu pour recommencer proprement
+    if (Test-Path $tempFilePath) { Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue }
+
+    $WPF_TxtProgressStatus.Text = "Lancement du téléchargement de $($tool.name)..."
+    $WPF_TxtProgressSpeed.Text = "Connexion..."
     $WPF_ProgressDownload.Value = 0
+    $WPF_ProgressDownload.IsIndeterminate = $true
 
     $global:DownloadStartTime = [DateTime]::Now
 
-    # WebClient avec événements
-    $webClient = New-Object System.Net.WebClient
-    $webClient.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    # Lancer le téléchargement via curl.exe dans un thread d'arrière-plan (Runspace natif)
+    $job = Start-ThreadJob -ArgumentList $tempFilePath, $url {
+        param($path, $downloadUrl)
+        $curlArgs = "-L -k -s -o `"$path`" -A `"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36`" `"$downloadUrl`""
+        $process = Start-Process curl.exe -ArgumentList $curlArgs -Wait -NoNewWindow -PassThru
+        return $process.ExitCode
+    }
+
+    # Démarrer un Timer WPF pour surveiller la taille du fichier et calculer la vitesse
+    $timer = New-Object System.Windows.Threading.DispatcherTimer
+    $timer.Interval = [TimeSpan]::FromMilliseconds(500)
     
-    # Configuration TLS & SSL
-    [System.Net.ServicePointManager]::SecurityProtocol = 3072 -bor 12288 -bor 768
-    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-
-    # Événement de progression du téléchargement
-    $webClient.add_DownloadProgressChanged({
-        param($sender, $e)
-        $WPF_ProgressDownload.Dispatcher.Invoke([Action]{
-            $WPF_ProgressDownload.Value = $e.ProgressPercentage
-            $received = ($e.BytesReceived / 1MB).ToString("F1")
-            $total = ($e.TotalBytesToReceive / 1MB).ToString("F1")
-            $WPF_TxtProgressStatus.Text = "Téléchargement de $($tool.name) : $received MB / $total MB ($($e.ProgressPercentage)%)"
+    $timer.Add_Tick({
+        # Si le job asynchrone est terminé
+        if ($job.AsyncResult.IsCompleted) {
+            $timer.Stop()
+            $WPF_ProgressDownload.IsIndeterminate = $false
             
-            $elapsed = ([DateTime]::Now - $global:DownloadStartTime).TotalSeconds
-            if ($elapsed -gt 0.1) {
-                $speedVal = ($e.BytesReceived / $elapsed) / 1MB
-                $WPF_TxtProgressSpeed.Text = "$($speedVal.ToString('F2')) MB/s"
-            }
-        })
-    })
-
-    # Événement de fin de téléchargement (avec extraction ZIP si nécessaire)
-    $webClient.add_DownloadFileCompleted({
-        param($sender, $e)
-        $WPF_ProgressDownload.Dispatcher.Invoke([Action]{
-            if ($e.Error) {
-                $WPF_TxtProgressStatus.Text = "Erreur de téléchargement : $($e.Error.Message)"
+            # Récupérer le code de retour du job
+            $exitCode = Receive-Job -Job $job
+            
+            if ($exitCode -ne 0 -or -not (Test-Path $tempFilePath) -or (Get-Item $tempFilePath).Length -lt 10KB) {
+                $WPF_TxtProgressStatus.Text = "Échec du téléchargement de $($tool.name) (Code curl: $exitCode)."
                 $WPF_TxtProgressSpeed.Text = ""
                 $WPF_ProgressDownload.Value = 0
                 if (Test-Path $tempFilePath) { Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue }
             } else {
+                # Succès !
                 if ($tempFilePath.EndsWith(".zip")) {
                     $WPF_TxtProgressStatus.Text = "Extraction de l'archive ZIP de $($tool.name)..."
                     $WPF_TxtProgressSpeed.Text = ""
@@ -1404,17 +1400,29 @@ function Download-PersistentTool {
                 $WPF_ProgressDownload.Value = 100
                 Populate-Downloads
             }
-        })
+            return
+        }
+
+        # Mettre à jour l'affichage de la progression
+        if (Test-Path $tempFilePath) {
+            try {
+                $file = Get-Item $tempFilePath
+                $currentSize = $file.Length
+                $sizeMB = ($currentSize / 1MB).ToString("F1")
+                
+                # Calcul de la vitesse moyenne de téléchargement
+                $elapsed = ([DateTime]::Now - $global:DownloadStartTime).TotalSeconds
+                if ($elapsed -gt 0.1) {
+                    $speedVal = ($currentSize / $elapsed) / 1MB
+                    $WPF_TxtProgressSpeed.Text = "$($speedVal.ToString('F2')) MB/s"
+                }
+                
+                $WPF_TxtProgressStatus.Text = "Téléchargement de $($tool.name) : $sizeMB MB transférés"
+            } catch {}
+        }
     })
 
-    # Lancement du téléchargement asynchrone non-bloquant
-    try {
-        $uri = New-Object System.Uri($url)
-        $webClient.DownloadFileAsync($uri, $tempFilePath)
-    } catch {
-        $WPF_TxtProgressStatus.Text = "Erreur de lancement : $($_.Exception.Message)"
-        $WPF_TxtProgressSpeed.Text = ""
-    }
+    $timer.Start()
 }
 
 # Événements bouton rafraîchir
