@@ -847,7 +847,10 @@ function Get-InstalledApps {
 }
 
 # Créer un élément CheckBox pour un programme
-function New-AppCheckBox ($appName) {
+function New-AppCheckBox {
+    param(
+        [string]$appName
+    )
     $chk = New-Object System.Windows.Controls.CheckBox
     $chk.Content = $appName
     $chk.Foreground = [System.Windows.Media.Brushes]::White
@@ -860,13 +863,13 @@ function New-AppCheckBox ($appName) {
         $chk.IsChecked = $false
     }
     
-    # Écouter les changements d'état
+    # Écouter les changements d'état avec capture de variable (closure)
     $chk.add_Checked({
         $GlobalCheckedApps[$appName] = $true
-    })
+    }.GetNewClosure())
     $chk.add_Unchecked({
         $GlobalCheckedApps[$appName] = $false
-    })
+    }.GetNewClosure())
     
     return $chk
 }
