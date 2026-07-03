@@ -522,6 +522,36 @@ $PredefinedPaths = @(
                                                 <Button Grid.Column="1" Name="BtnRunEset" Style="{StaticResource ModernButton}" Content="Lancer" Width="70" Height="25" Padding="0"/>
                                             </Grid>
                                         </Border>
+
+                                        <!-- RogueKiller -->
+                                        <Border Background="#1E1E24" CornerRadius="4" Padding="10" Margin="0,0,0,10">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="RogueKiller (Portable)" FontWeight="Bold" Foreground="White"/>
+                                                    <TextBlock Text="Détection avancée des malwares et rootkits" Foreground="#888888" FontSize="10"/>
+                                                </StackPanel>
+                                                <Button Grid.Column="1" Name="BtnRunRogue" Style="{StaticResource ModernButton}" Content="Lancer" Width="70" Height="25" Padding="0"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- Malwarebytes -->
+                                        <Border Background="#1E1E24" CornerRadius="4" Padding="10" Margin="0,0,0,10">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="Malwarebytes (Offline)" FontWeight="Bold" Foreground="White"/>
+                                                    <TextBlock Text="Installateur hors-ligne Malwarebytes" Foreground="#888888" FontSize="10"/>
+                                                </StackPanel>
+                                                <Button Grid.Column="1" Name="BtnRunMBAM" Style="{StaticResource ModernButton}" Content="Lancer" Width="70" Height="25" Padding="0"/>
+                                            </Grid>
+                                        </Border>
                                     </StackPanel>
                                 </ScrollViewer>
                             </Grid>
@@ -976,13 +1006,14 @@ function Start-DisposableScanner {
         # 1. Téléchargement
         Write-Output "[>>] Téléchargement de la dernière version de $n..."
         try {
-            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            # Activer explicitement TLS 1.2 (3072) et TLS 1.3 (12288) dans le runspace de ce thread job
+            [System.Net.ServicePointManager]::SecurityProtocol = 3072 -bor 12288 -bor 768
             # Bypasser les vérifications SSL en cas de problème sur les vieux systèmes
-            [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
+            [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
             
             $webClient = New-Object System.Net.WebClient
-            # Simuler un User Agent pour éviter le blocage de certains serveurs
-            $webClient.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+            # Simuler un User Agent moderne pour éviter le blocage par Cloudflare / Kaspersky
+            $webClient.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
             $webClient.DownloadFile($u, $filePath)
         } catch {
             return "[!!] Échec du téléchargement de $n : $($_.Exception.Message)"
@@ -1001,15 +1032,18 @@ function Start-DisposableScanner {
             return "[!!] Échec du lancement de $n : $($_.Exception.Message)"
         }
         
-        # 3. Suppression automatique
-        Write-Output "[>>] Suppression du fichier temporaire de $n..."
-        if (Test-Path $filePath) {
-            # Petite pause pour libérer le descripteur de fichier si nécessaire
-            Start-Sleep -Seconds 2
-            Remove-Item -Path $filePath -Force -ErrorAction SilentlyContinue
+        # 3. Suppression automatique (ne s'applique pas si Malwarebytes Installer)
+        if ($n -ne "MalwarebytesInstaller") {
+            Write-Output "[>>] Suppression du fichier temporaire de $n..."
+            if (Test-Path $filePath) {
+                # Petite pause pour libérer le descripteur de fichier si nécessaire
+                Start-Sleep -Seconds 2
+                Remove-Item -Path $filePath -Force -ErrorAction SilentlyContinue
+            }
+            return "[OK] $n a été fermé et désinstallé (supprimé) avec succès. (Code de sortie : $code)"
+        } else {
+            return "[OK] Malwarebytes installé. Utilisez le Désinstalleur Express de l'application pour le retirer plus tard si nécessaire. (Code de sortie : $code)"
         }
-        
-        return "[OK] $n a été fermé et désinstallé (supprimé) avec succès. (Code de sortie : $code)"
     } | Receive-Job -Wait -AutoRemoveJob | ForEach-Object {
         Log-App $_
     }
@@ -1028,6 +1062,16 @@ $WPF_BtnRunAdw.Add_Click({
 # ESET Online Scanner
 $WPF_BtnRunEset.Add_Click({
     Start-DisposableScanner -Name "ESETOnlineScanner" -Url "https://download.eset.com/com/eset/tools/online_scanner/latest/esetonlinescanner_fra.exe"
+})
+
+# RogueKiller (Portable)
+$WPF_BtnRunRogue.Add_Click({
+    Start-DisposableScanner -Name "RogueKiller" -Url "https://download.adlice.com/api/?action=download&app=roguekiller&type=portable64"
+})
+
+# Malwarebytes (Installer)
+$WPF_BtnRunMBAM.Add_Click({
+    Start-DisposableScanner -Name "MalwarebytesInstaller" -Url "https://downloads.malwarebytes.com/file/mb4_offline"
 })
 
 
