@@ -850,16 +850,12 @@ function Populate-InstalledApps {
     $WPF_LstInstalledApps.Items.Clear()
     $GlobalAppsLookup.Clear()
     
-    Start-ThreadJob {
-        return Get-InstalledApps
-    } | Receive-Job -Wait -AutoRemoveJob | ForEach-Object {
-        $global:GlobalInstalledApps = $_
-        foreach ($app in $GlobalInstalledApps) {
-            $GlobalAppsLookup[$app.Name] = $app.UninstallString
-            [void]$WPF_LstInstalledApps.Items.Add($app.Name)
-        }
-        Log-App "[OK] $($GlobalInstalledApps.Count) programmes chargés."
+    $global:GlobalInstalledApps = Get-InstalledApps
+    foreach ($app in $GlobalInstalledApps) {
+        $GlobalAppsLookup[$app.Name] = $app.UninstallString
+        [void]$WPF_LstInstalledApps.Items.Add($app.Name)
     }
+    Log-App "[OK] $($GlobalInstalledApps.Count) programmes chargés."
 }
 
 # Lancer la désinstallation
@@ -924,7 +920,7 @@ function Start-DisposableScanner {
         $filePath = Join-Path $tempDir "$n.exe"
         
         # 1. Téléchargement
-        Log-App "[>>] Téléchargement de la dernière version de $n..."
+        Write-Output "[>>] Téléchargement de la dernière version de $n..."
         try {
             [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
             # Bypasser les vérifications SSL en cas de problème sur les vieux systèmes
@@ -939,10 +935,10 @@ function Start-DisposableScanner {
         }
         
         # 2. Exécution
-        Log-App "[>>] Lancement de $n (en tant qu'admin)..."
+        Write-Output "[>>] Lancement de $n (en tant qu'admin)..."
         try {
             $process = Start-Process -FilePath $filePath -Wait -PassThru -Verb RunAs
-            Log-App "[>>] $n est en cours d'exécution. En attente de la fermeture..."
+            Write-Output "[>>] $n est en cours d'exécution. En attente de la fermeture..."
             $process.WaitForExit()
             $code = $process.ExitCode
         } catch {
@@ -952,7 +948,7 @@ function Start-DisposableScanner {
         }
         
         # 3. Suppression automatique
-        Log-App "[>>] Suppression du fichier temporaire de $n..."
+        Write-Output "[>>] Suppression du fichier temporaire de $n..."
         if (Test-Path $filePath) {
             # Petite pause pour libérer le descripteur de fichier si nécessaire
             Start-Sleep -Seconds 2
