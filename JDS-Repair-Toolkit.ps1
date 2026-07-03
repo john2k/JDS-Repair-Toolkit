@@ -1032,20 +1032,22 @@ function Start-DisposableScanner {
         
         $filePath = Join-Path $tempDir "$n.exe"
         
-        # 1. Téléchargement
-        Write-Output "[>>] Téléchargement de la dernière version de $n..."
+        # 1. Téléchargement via curl.exe (contourne tous les bugs SSL de .NET)
+        Write-Output "[>>] Téléchargement de la dernière version de $n via curl..."
         try {
-            # Activer explicitement TLS 1.2 (3072) et TLS 1.3 (12288) dans le runspace de ce thread job
-            [System.Net.ServicePointManager]::SecurityProtocol = 3072 -bor 12288 -bor 768
-            # Bypasser les vérifications SSL en cas de problème sur les vieux systèmes
-            [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+            $curlArgs = "-L -k -s -o `"$filePath`" -A `"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36`" `"$u`""
+            $process = Start-Process curl.exe -ArgumentList $curlArgs -Wait -NoNewWindow -PassThru
             
-            $webClient = New-Object System.Net.WebClient
-            # Simuler un User Agent moderne pour éviter le blocage par Cloudflare / Kaspersky
-            $webClient.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-            $webClient.DownloadFile($u, $filePath)
+            if ($process.ExitCode -ne 0 -or -not (Test-Path $filePath) -or (Get-Item $filePath).Length -lt 10KB) {
+                $err = "Code sortie curl: $($process.ExitCode)"
+                if (Test-Path $filePath) {
+                    $err += " (Taille du fichier: $((Get-Item $filePath).Length) octets)"
+                    Remove-Item -Path $filePath -Force -ErrorAction SilentlyContinue
+                }
+                return "[!!] Échec du téléchargement de $n : $err"
+            }
         } catch {
-            return "[!!] Échec du téléchargement de $n : $($_.Exception.Message)"
+            return "[!!] Échec du lancement de curl.exe : $($_.Exception.Message)"
         }
         
         # 2. Exécution
