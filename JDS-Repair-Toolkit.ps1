@@ -1196,7 +1196,9 @@ function Populate-Downloads {
     $WPF_TxtProgressStatus.Text = "Chargement du catalogue des versions..."
     $WPF_LstDownloads.Items.Clear()
 
-    # Charger versions.json depuis GitHub en temps réel (évite le besoin d'un fichier local)
+    # Déclarer l'instance de BrushConverter pour la gestion des couleurs WPF
+    $BrushConverter = New-Object System.Windows.Media.BrushConverter
+
     # Charger versions.json depuis GitHub en temps réel (via curl.exe pour éviter les blocages SSL .NET)
     try {
         $catalogUrl = "https://raw.githubusercontent.com/john2k/JDS-Repair-Toolkit/main/versions.json?t=" + [DateTime]::Now.Ticks
@@ -1247,7 +1249,7 @@ function Populate-Downloads {
         $col0 = New-Object System.Windows.Controls.ColumnDefinition; $col0.Width = New-Object System.Windows.GridLength(320); $itemGrid.ColumnDefinitions.Add($col0)
         $col1 = New-Object System.Windows.Controls.ColumnDefinition; $col1.Width = New-Object System.Windows.GridLength(180); $itemGrid.ColumnDefinitions.Add($col1)
         $col2 = New-Object System.Windows.Controls.ColumnDefinition; $col2.Width = New-Object System.Windows.GridLength(150); $itemGrid.ColumnDefinitions.Add($col2)
-        $col3 = New-Object System.Windows.Controls.ColumnDefinition; $col3.Width = New-Object System.Windows.GridLength([System.Windows.GridLength]::Auto); $itemGrid.ColumnDefinitions.Add($col3)
+        $col3 = New-Object System.Windows.Controls.ColumnDefinition; $col3.Width = [System.Windows.GridLength]::Auto; $itemGrid.ColumnDefinitions.Add($col3)
 
         # Name block
         $spName = New-Object System.Windows.Controls.StackPanel
@@ -1291,10 +1293,10 @@ function Populate-Downloads {
         $btnAction.FontWeight = [System.Windows.FontWeights]::Bold; $btnAction.FontSize = 11; $btnAction.Cursor = [System.Windows.Input.Cursors]::Hand
         
         if ($statusText -eq "À jour") {
-            $btnAction.Background = [System.Windows.Media.BrushConverter]::ConvertFromString("#2D3748")
+            $btnAction.Background = $BrushConverter.ConvertFromString("#2D3748")
             $btnAction.Foreground = [System.Windows.Media.Brushes]::LightGray
         } else {
-            $btnAction.Background = [System.Windows.Media.BrushConverter]::ConvertFromString("#00adb5")
+            $btnAction.Background = $BrushConverter.ConvertFromString("#00adb5")
             $btnAction.Foreground = [System.Windows.Media.Brushes]::White
         }
 
@@ -1309,7 +1311,7 @@ function Populate-Downloads {
 
         # Border wrapper
         $itemBorder = New-Object System.Windows.Controls.Border
-        $itemBorder.Background = [System.Windows.Media.BrushConverter]::ConvertFromString("#252530")
+        $itemBorder.Background = $BrushConverter.ConvertFromString("#252530")
         $itemBorder.CornerRadius = New-Object System.Windows.CornerRadius(4)
         $itemBorder.Padding = New-Object System.Windows.Thickness(8)
         $itemBorder.Margin = New-Object System.Windows.Thickness(0,0,0,6)
@@ -1367,7 +1369,7 @@ function Download-PersistentTool {
     $timer = New-Object System.Windows.Threading.DispatcherTimer
     $timer.Interval = [TimeSpan]::FromMilliseconds(500)
     
-    $timer.Add_Tick({
+    $timer.Add_Tick(({
         # Si le job asynchrone est terminé
         if ($job.AsyncResult.IsCompleted) {
             $timer.Stop()
@@ -1420,7 +1422,7 @@ function Download-PersistentTool {
                 $WPF_TxtProgressStatus.Text = "Téléchargement de $($tool.name) : $sizeMB MB transférés"
             } catch {}
         }
-    })
+    }).GetNewClosure())
 
     $timer.Start()
 }
