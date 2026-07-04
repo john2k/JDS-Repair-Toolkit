@@ -1258,6 +1258,16 @@ function Populate-Downloads {
         $dirPath = Join-Path $Config.ToolsPath "Logiciels\$($tool.folder)"
         $filename = $tool.filename
         $localFile = Join-Path $dirPath $filename
+        
+        # Migration automatique des anciens formats de nommage (ex: eset.exe -> ESETOnlineScanner.exe)
+        $oldFile = Join-Path $dirPath "$($tool.id).exe"
+        if (-not (Test-Path $localFile) -and (Test-Path $oldFile)) {
+            try {
+                Rename-Item -Path $oldFile -NewName $filename -Force -ErrorAction SilentlyContinue
+                Log-Download "[Migration] Fichier renommé automatiquement de $($tool.id).exe vers $filename"
+            } catch {}
+        }
+        
         $localVer = Get-LocalToolVersion -filePath $localFile
         
         $statusText = ""
