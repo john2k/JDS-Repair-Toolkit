@@ -33,11 +33,9 @@ if (-not (Get-Command Start-ThreadJob -ErrorAction SilentlyContinue)) {
             [object[]]$ArgumentList = @()
         )
         $ps = [PowerShell]::Create()
-        $ps.AddScript($ScriptBlock) | Out-Null
+        $ps.AddCommand("Invoke-Command").AddParameter("ScriptBlock", $ScriptBlock) | Out-Null
         if ($ArgumentList) {
-            foreach ($arg in $ArgumentList) {
-                $ps.AddArgument($arg) | Out-Null
-            }
+            $ps.AddParameter("ArgumentList", $ArgumentList) | Out-Null
         }
         $asyncResult = $ps.BeginInvoke()
         [PSCustomObject]@{
@@ -638,7 +636,10 @@ $PredefinedPaths = @(
                             <TextBlock Text="Gestionnaire de Téléchargements" FontSize="22" FontWeight="Bold" Foreground="White"/>
                             <TextBlock Text="Téléchargez et mettez à jour de façon persistante vos outils dans votre dossier de boîte à outils." Foreground="#AAAAAA" FontSize="11" Margin="0,5,0,0"/>
                         </StackPanel>
-                        <Button Grid.Column="1" Name="BtnRefreshDownloads" Style="{StaticResource SecondaryButton}" Content="Rafraîchir les versions" Height="30" Padding="15,0,15,0" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Name="BtnOpenDownloadLog" Style="{StaticResource SecondaryButton}" Content="📝 Voir le Log" Height="30" Padding="15,0,15,0" Margin="0,0,10,0"/>
+                            <Button Name="BtnRefreshDownloads" Style="{StaticResource SecondaryButton}" Content="🔄 Rafraîchir les versions" Height="30" Padding="15,0,15,0"/>
+                        </StackPanel>
                     </Grid>
 
                     <!-- Liste des outils -->
@@ -1180,6 +1181,31 @@ function Get-LocalToolVersion ($filePath) {
     return "Absent"
 }
 
+# Enregistrer des logs de téléchargement détaillés dans un fichier physique
+function Log-Download ($msg) {
+    if (-not [string]::IsNullOrEmpty($Config.ToolsPath)) {
+        try {
+            $logPath = Join-Path $Config.ToolsPath "JDS-Downloads.log"
+            $timestamp = [DateTime]::Now.ToString("yyyy-MM-dd HH:mm:ss")
+            "[ $timestamp ] $msg" | Out-File -FilePath $logPath -Append -Encoding utf8
+        } catch {}
+    }
+}
+
+# Ouvrir le fichier de log de téléchargement dans Notepad
+$WPF_BtnOpenDownloadLog.Add_Click({
+    if (-not [string]::IsNullOrEmpty($Config.ToolsPath)) {
+        $logPath = Join-Path $Config.ToolsPath "JDS-Downloads.log"
+        if (Test-Path $logPath) {
+            Start-Process notepad.exe $logPath
+        } else {
+            [System.Windows.MessageBox]::Show("Aucune entrée de log n'a encore été créée.", "Log vide", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
+        }
+    } else {
+        [System.Windows.MessageBox]::Show("Veuillez d'abord sélectionner un dossier de boîte à outils.", "Dossier non sélectionné", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+    }
+})
+
 # Charger le catalogue et remplir la liste des téléchargements
 function Populate-Downloads {
     if ([string]::IsNullOrEmpty($Config.ToolsPath)) {
@@ -1208,8 +1234,10 @@ function Populate-Downloads {
             throw "Réponse JSON invalide ou vide"
         }
         $global:GlobalToolsList = $jsonContent | ConvertFrom-Json
+        Log-Download "[OK] Catalogue de téléchargement chargé. $($global:GlobalToolsList.Count) outils référencés."
     } catch {
         $WPF_TxtProgressStatus.Text = "Échec du chargement du catalogue via curl : $($_.Exception.Message)"
+        Log-Download "[!!] Échec du chargement du catalogue versions.json en ligne : $($_.Exception.Message)"
         return
     }
 
@@ -1322,7 +1350,7 @@ function Populate-Downloads {
     $WPF_TxtProgressStatus.Text = "Prêt (Tous les statuts de version chargés)."
 }
 
-# Lancer le téléchargement asynchrone non-bloquant de l'outil via curl.exe avec suivi de taille
+# Lancer le téléchargement asynchrone non-bloquant de l'outil via curl.exe avec suivi de taille et écriture de log
 function Download-PersistentTool {
     param(
         [string]$ToolId
@@ -1331,10 +1359,13 @@ function Download-PersistentTool {
     $tool = $global:GlobalToolsList | Where-Object { $_.id -eq $ToolId }
     if (-not $tool) { return }
 
+    Log-Download "[>>] Démarrage de la procédure de téléchargement de : $($tool.name)"
+
     # Préparer les répertoires de stockage (Logiciels\NomOutil)
     $dirPath = Join-Path $Config.ToolsPath "Logiciels\$($tool.folder)"
     if (-not (Test-Path $dirPath)) {
         New-Item -ItemType Directory -Path $dirPath -Force | Out-Null
+        Log-Download "Création du dossier de stockage : $dirPath"
     }
 
     # Déterminer si zip ou exe
@@ -1346,9 +1377,14 @@ function Download-PersistentTool {
     
     $tempFileName = "$($tool.id)$extension"
     $tempFilePath = Join-Path $dirPath $tempFileName
+    Log-Download "URL cible : $url"
+    Log-Download "Fichier local final : $tempFilePath"
 
     # Supprimer l'existant s'il y a lieu pour recommencer proprement
-    if (Test-Path $tempFilePath) { Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue }
+    if (Test-Path $tempFilePath) { 
+        Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue 
+        Log-Download "Nettoyage du fichier temporaire préexistant."
+    }
 
     $WPF_TxtProgressStatus.Text = "Lancement du téléchargement de $($tool.name)..."
     $WPF_TxtProgressSpeed.Text = "Connexion..."
@@ -1363,6 +1399,7 @@ function Download-PersistentTool {
         & curl.exe -L -k -s -o $path -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" $downloadUrl
         return $LASTEXITCODE
     }
+    Log-Download "Thread Job lancé en tâche de fond. Surveillance démarrée."
 
     # Démarrer un Timer WPF pour surveiller la taille du fichier et calculer la vitesse
     $timer = New-Object System.Windows.Threading.DispatcherTimer
@@ -1382,23 +1419,33 @@ function Download-PersistentTool {
             
             # Récupérer le code de retour du job
             $exitCode = Receive-Job -Job $job
+            Log-Download "Thread de téléchargement terminé. Code retour curl: $exitCode."
             
             if ($exitCode -ne 0 -or -not (Test-Path $tempFilePath) -or (Get-Item $tempFilePath).Length -lt 10KB) {
+                $fileLength = 0
+                if (Test-Path $tempFilePath) {
+                    $fileLength = (Get-Item $tempFilePath).Length
+                }
                 $WPF_TxtProgressStatus.Text = "Échec du téléchargement de $($tool.name) (Code curl: $exitCode)."
                 $WPF_TxtProgressSpeed.Text = ""
                 $WPF_ProgressDownload.Value = 0
+                Log-Download "[!!] ÉCHEC du téléchargement de $($tool.name). Code curl: $exitCode. Taille du fichier écrit: $fileLength octets."
                 if (Test-Path $tempFilePath) { Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue }
             } else {
                 # Succès !
+                Log-Download "[OK] Fichier téléchargé avec succès. Poids final : $((Get-Item $tempFilePath).Length) octets."
                 if ($tempFilePath.EndsWith(".zip")) {
                     $WPF_TxtProgressStatus.Text = "Extraction de l'archive ZIP de $($tool.name)..."
                     $WPF_TxtProgressSpeed.Text = ""
+                    Log-Download "Extraction de l'archive ZIP lancée vers : $dirPath"
                     try {
                         Expand-Archive -Path $tempFilePath -DestinationPath $dirPath -Force
                         Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue
                         $WPF_TxtProgressStatus.Text = "Téléchargement et extraction de $($tool.name) terminés !"
+                        Log-Download "[OK] Décompression ZIP terminée avec succès. Nettoyage de l'archive effectué."
                     } catch {
                         $WPF_TxtProgressStatus.Text = "Erreur d'extraction ZIP : $($_.Exception.Message)"
+                        Log-Download "[!!] Erreur d'extraction du ZIP : $($_.Exception.Message)"
                     }
                 } else {
                     $WPF_TxtProgressStatus.Text = "Téléchargement de $($tool.name) terminé !"
