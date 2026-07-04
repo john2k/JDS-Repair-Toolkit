@@ -67,6 +67,17 @@ if (-not (Get-Command Start-ThreadJob -ErrorAction SilentlyContinue)) {
     }
 }
 
+# Vérifier si une tâche asynchrone (de type RunspaceJob ou ThreadJob standard) est terminée
+function Get-JobFinished {
+    param($Job)
+    if ($null -eq $Job) { return $true }
+    if ($Job.PSType -eq "RunspaceJob") {
+        return $Job.AsyncResult.IsCompleted
+    } else {
+        return ($Job.State -ne "Running" -and $Job.State -ne "NotStarted")
+    }
+}
+
 # Répertoire de travail
 $ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { $pwd.Path }
 $ConfigFile = Join-Path $ScriptDir "JDS-Repair-Toolkit-Config.json"
@@ -1425,7 +1436,7 @@ function Download-PersistentTool {
         }
 
         # Si le job asynchrone est terminé
-        if ($null -eq $job -or $job.AsyncResult.IsCompleted) {
+        if ($null -eq $job -or (Get-JobFinished -Job $job)) {
             $timer.Stop()
             $WPF_ProgressDownload.IsIndeterminate = $false
             
