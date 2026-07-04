@@ -1361,11 +1361,11 @@ function Download-PersistentTool {
 
     Log-Download "[>>] Démarrage de la procédure de téléchargement de : $($tool.name)"
 
-    # Préparer les répertoires de stockage (Logiciels\NomOutil)
+    # Préparer le répertoire final sur le NAS/réseau (Logiciels\NomOutil)
     $dirPath = Join-Path $Config.ToolsPath "Logiciels\$($tool.folder)"
     if (-not (Test-Path $dirPath)) {
         New-Item -ItemType Directory -Path $dirPath -Force | Out-Null
-        Log-Download "Création du dossier de stockage : $dirPath"
+        Log-Download "Création du dossier de stockage sur le NAS : $dirPath"
     }
 
     # Déterminer si zip ou exe
@@ -1376,14 +1376,26 @@ function Download-PersistentTool {
     }
     
     $tempFileName = "$($tool.id)$extension"
-    $tempFilePath = Join-Path $dirPath $tempFileName
-    Log-Download "URL cible : $url"
-    Log-Download "Fichier local final : $tempFilePath"
+    $finalFilePath = Join-Path $dirPath $tempFileName
 
-    # Supprimer l'existant s'il y a lieu pour recommencer proprement
+    # Préparer le dossier temporaire LOCAL pour éviter les latences/blocages réseau lors du téléchargement par curl
+    $localTempDir = Join-Path $env:TEMP "JDS-Downloads-Temp"
+    if (-not (Test-Path $localTempDir)) {
+        New-Item -ItemType Directory -Path $localTempDir -Force | Out-Null
+    }
+    $tempFilePath = Join-Path $localTempDir $tempFileName
+
+    Log-Download "URL source : $url"
+    Log-Download "Téléchargement local temporaire : $tempFilePath"
+    Log-Download "Destination finale cible : $finalFilePath"
+
+    # Supprimer les anciens fichiers temporaires
     if (Test-Path $tempFilePath) { 
         Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue 
-        Log-Download "Nettoyage du fichier temporaire préexistant."
+    }
+    if (Test-Path $finalFilePath) { 
+        Remove-Item -Path $finalFilePath -Force -ErrorAction SilentlyContinue 
+        Log-Download "Suppression du fichier préexistant sur le NAS."
     }
 
     $WPF_TxtProgressStatus.Text = "Lancement du téléchargement de $($tool.name)..."
@@ -1393,7 +1405,7 @@ function Download-PersistentTool {
 
     $global:DownloadStartTime = [DateTime]::Now
 
-    # Lancer le téléchargement via curl.exe directement (sans Start-Process) pour un traitement parfait des arguments et des espaces
+    # Lancer le téléchargement local via curl.exe directement (sans Start-Process) pour un traitement parfait des arguments et des espaces
     $job = Start-ThreadJob -ArgumentList $tempFilePath, $url {
         param($path, $downloadUrl)
         & curl.exe -L -k -s -o $path -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" $downloadUrl
@@ -1429,30 +1441,40 @@ function Download-PersistentTool {
                 $WPF_TxtProgressStatus.Text = "Échec du téléchargement de $($tool.name) (Code curl: $exitCode)."
                 $WPF_TxtProgressSpeed.Text = ""
                 $WPF_ProgressDownload.Value = 0
-                Log-Download "[!!] ÉCHEC du téléchargement de $($tool.name). Code curl: $exitCode. Taille du fichier écrit: $fileLength octets."
+                Log-Download "[!!] ÉCHEC du téléchargement local de $($tool.name). Code curl: $exitCode. Taille du fichier écrit: $fileLength octets."
                 if (Test-Path $tempFilePath) { Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue }
             } else {
-                # Succès !
-                Log-Download "[OK] Fichier téléchargé avec succès. Poids final : $((Get-Item $tempFilePath).Length) octets."
-                if ($tempFilePath.EndsWith(".zip")) {
-                    $WPF_TxtProgressStatus.Text = "Extraction de l'archive ZIP de $($tool.name)..."
-                    $WPF_TxtProgressSpeed.Text = ""
-                    Log-Download "Extraction de l'archive ZIP lancée vers : $dirPath"
-                    try {
-                        Expand-Archive -Path $tempFilePath -DestinationPath $dirPath -Force
-                        Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue
+                # Succès du téléchargement local ! Copie vers le NAS
+                Log-Download "[OK] Fichier téléchargé localement avec succès. Poids : $((Get-Item $tempFilePath).Length) octets."
+                $WPF_TxtProgressStatus.Text = "Copie du fichier vers le NAS..."
+                $WPF_TxtProgressSpeed.Text = "Copie..."
+                
+                try {
+                    Log-Download "Copie du fichier local $tempFilePath vers le NAS $finalFilePath..."
+                    Copy-Item -Path $tempFilePath -Destination $finalFilePath -Force
+                    Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue
+                    Log-Download "[OK] Copie vers le NAS terminée avec succès."
+                    
+                    if ($finalFilePath.EndsWith(".zip")) {
+                        $WPF_TxtProgressStatus.Text = "Extraction de l'archive ZIP de $($tool.name)..."
+                        $WPF_TxtProgressSpeed.Text = "Extraction..."
+                        Log-Download "Extraction de l'archive ZIP lancée vers : $dirPath"
+                        
+                        Expand-Archive -Path $finalFilePath -DestinationPath $dirPath -Force
+                        Remove-Item -Path $finalFilePath -Force -ErrorAction SilentlyContinue
                         $WPF_TxtProgressStatus.Text = "Téléchargement et extraction de $($tool.name) terminés !"
                         Log-Download "[OK] Décompression ZIP terminée avec succès. Nettoyage de l'archive effectué."
-                    } catch {
-                        $WPF_TxtProgressStatus.Text = "Erreur d'extraction ZIP : $($_.Exception.Message)"
-                        Log-Download "[!!] Erreur d'extraction du ZIP : $($_.Exception.Message)"
+                    } else {
+                        $WPF_TxtProgressStatus.Text = "Téléchargement de $($tool.name) terminé !"
+                        $WPF_TxtProgressSpeed.Text = ""
                     }
-                } else {
-                    $WPF_TxtProgressStatus.Text = "Téléchargement de $($tool.name) terminé !"
-                    $WPF_TxtProgressSpeed.Text = ""
+                    $WPF_ProgressDownload.Value = 100
+                    Populate-Downloads
+                } catch {
+                    $WPF_TxtProgressStatus.Text = "Erreur de copie/extraction : $($_.Exception.Message)"
+                    Log-Download "[!!] Erreur lors de la copie ou de l'extraction vers le NAS : $($_.Exception.Message)"
+                    $WPF_ProgressDownload.Value = 0
                 }
-                $WPF_ProgressDownload.Value = 100
-                Populate-Downloads
             }
             return
         }
