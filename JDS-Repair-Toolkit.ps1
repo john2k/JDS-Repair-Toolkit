@@ -1379,14 +1379,14 @@ function Download-PersistentTool {
         Log-Download "Création du dossier de stockage sur le NAS : $dirPath"
     }
 
-    # Déterminer si zip ou exe
+    # Déterminer le nom temporaire de fichier (utiliser le filename final attendu pour les exe)
     $url = $tool.url
-    $extension = ".exe"
+    $tempFileName = ""
     if ($url -match "\.zip") {
-        $extension = ".zip"
+        $tempFileName = "$($tool.id).zip"
+    } else {
+        $tempFileName = $tool.filename
     }
-    
-    $tempFileName = "$($tool.id)$extension"
     $finalFilePath = Join-Path $dirPath $tempFileName
 
     # Préparer le dossier temporaire LOCAL pour éviter les latences/blocages réseau lors du téléchargement par curl
