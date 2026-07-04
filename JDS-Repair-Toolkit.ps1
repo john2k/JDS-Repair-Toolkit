@@ -1357,12 +1357,11 @@ function Download-PersistentTool {
 
     $global:DownloadStartTime = [DateTime]::Now
 
-    # Lancer le téléchargement via curl.exe dans un thread d'arrière-plan (Runspace natif)
+    # Lancer le téléchargement via curl.exe directement (sans Start-Process) pour un traitement parfait des arguments et des espaces
     $job = Start-ThreadJob -ArgumentList $tempFilePath, $url {
         param($path, $downloadUrl)
-        $curlArgs = "-L -k -s -o `"$path`" -A `"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36`" `"$downloadUrl`""
-        $process = Start-Process curl.exe -ArgumentList $curlArgs -Wait -NoNewWindow -PassThru
-        return $process.ExitCode
+        & curl.exe -L -k -s -o $path -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" $downloadUrl
+        return $LASTEXITCODE
     }
 
     # Démarrer un Timer WPF pour surveiller la taille du fichier et calculer la vitesse
@@ -1370,8 +1369,14 @@ function Download-PersistentTool {
     $timer.Interval = [TimeSpan]::FromMilliseconds(500)
     
     $timer.Add_Tick(({
+        # Sécurité : Si le timer est orphelin/stale (ex: après fermeture/relance du script), auto-destruction
+        if ([string]::IsNullOrEmpty($tempFilePath) -or $null -eq $timer) {
+            try { $timer.Stop() } catch {}
+            return
+        }
+
         # Si le job asynchrone est terminé
-        if ($job.AsyncResult.IsCompleted) {
+        if ($null -eq $job -or $job.AsyncResult.IsCompleted) {
             $timer.Stop()
             $WPF_ProgressDownload.IsIndeterminate = $false
             
@@ -1828,4 +1833,5 @@ if (-not [string]::IsNullOrEmpty($Config.ToolsPath)) {
 }
 
 # Lancer la boucle WPF
+$Form.Add_Closed({ [System.Windows.Threading.Dispatcher]::CurrentDispatcher.InvokeShutdown() })
 $Form.ShowDialog() | Out-Null
