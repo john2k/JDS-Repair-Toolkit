@@ -1280,7 +1280,7 @@ function Populate-Downloads {
             $colorBrush = [System.Windows.Media.Brushes]::Red
             $btnText = "Télécharger"
         } else {
-            if ($localVer -eq $tool.version) {
+            if ($localVer -eq $tool.version -or $localVer -eq "Présent") {
                 $statusText = "À jour"
                 $colorBrush = [System.Windows.Media.Brushes]::LightGreen
                 $btnText = "Réinstaller"
@@ -1492,8 +1492,9 @@ function Download-PersistentTool {
                     $WPF_ProgressDownload.Value = 100
                     Populate-Downloads
                 } catch {
-                    $WPF_TxtProgressStatus.Text = "Erreur de copie/extraction : $($_.Exception.Message)"
-                    Log-Download "[!!] Erreur lors de la copie ou de l'extraction vers le NAS : $($_.Exception.Message)"
+                    $errMsg = if ($_.Exception.Message) { $_.Exception.Message } else { $_.ToString() }
+                    $WPF_TxtProgressStatus.Text = "Erreur de copie/extraction : $errMsg"
+                    Log-Download "[!!] Erreur lors de la copie ou de l'extraction vers le NAS : $errMsg"
                     $WPF_ProgressDownload.Value = 0
                 }
             }
