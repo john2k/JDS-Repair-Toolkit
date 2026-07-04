@@ -1880,5 +1880,4 @@ if (-not [string]::IsNullOrEmpty($Config.ToolsPath)) {
 }
 
 # Lancer la boucle WPF
-$Form.Add_Closed({ [System.Windows.Threading.Dispatcher]::CurrentDispatcher.InvokeShutdown() })
 $Form.ShowDialog() | Out-Null
