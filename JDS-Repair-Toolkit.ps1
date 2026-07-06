@@ -109,20 +109,59 @@ $PredefinedPaths = @(
 
 # Liste des applications du client installables via winget (style Chris Titus)
 $global:WingetAppsList = @(
+    # Navigateurs
     [PSCustomObject]@{ id = "Google.Chrome"; name = "Google Chrome"; category = "Navigateurs" },
     [PSCustomObject]@{ id = "Mozilla.Firefox"; name = "Mozilla Firefox"; category = "Navigateurs" },
     [PSCustomObject]@{ id = "Brave.Brave"; name = "Brave Browser"; category = "Navigateurs" },
-    
+    [PSCustomObject]@{ id = "Microsoft.Edge"; name = "Microsoft Edge"; category = "Navigateurs" },
+    [PSCustomObject]@{ id = "Vivaldi.Vivaldi"; name = "Vivaldi"; category = "Navigateurs" },
+    [PSCustomObject]@{ id = "Opera.Opera"; name = "Opera"; category = "Navigateurs" },
+
+    # Communication
+    [PSCustomObject]@{ id = "Discord.Discord"; name = "Discord"; category = "Communication" },
+    [PSCustomObject]@{ id = "Zoom.Zoom"; name = "Zoom"; category = "Communication" },
+    [PSCustomObject]@{ id = "Microsoft.Teams"; name = "Microsoft Teams"; category = "Communication" },
+    [PSCustomObject]@{ id = "Slack.Slack"; name = "Slack"; category = "Communication" },
+    [PSCustomObject]@{ id = "Telegram.TelegramDesktop"; name = "Telegram"; category = "Communication" },
+    [PSCustomObject]@{ id = "Signal.Signal"; name = "Signal"; category = "Communication" },
+
+    # Bureautique / Dev
+    [PSCustomObject]@{ id = "Adobe.Acrobat.Reader.64-bit"; name = "Adobe Reader 64-bit"; category = "Bureautique & Docs" },
+    [PSCustomObject]@{ id = "PDF24.PDF24Creator"; name = "PDF24 Creator"; category = "Bureautique & Docs" },
+    [PSCustomObject]@{ id = "LibreOffice.LibreOffice"; name = "LibreOffice"; category = "Bureautique & Docs" },
+    [PSCustomObject]@{ id = "Notepad++.Notepad++"; name = "Notepad++"; category = "Bureautique & Docs" },
+    [PSCustomObject]@{ id = "Microsoft.VisualStudioCode"; name = "VS Code"; category = "Bureautique & Docs" },
+    [PSCustomObject]@{ id = "TrackerSoftware.PDF-XChangeEditor"; name = "PDF-XChange Editor"; category = "Bureautique & Docs" },
+
+    # Multimedia
     [PSCustomObject]@{ id = "VideoLAN.VLC"; name = "VLC Media Player"; category = "Multimedia" },
-    
-    [PSCustomObject]@{ id = "7zip.7zip"; name = "7-Zip"; category = "Utilitaires" },
-    [PSCustomObject]@{ id = "Notepad++.Notepad++"; name = "Notepad++"; category = "Utilitaires" },
-    [PSCustomObject]@{ id = "Greenshot.Greenshot"; name = "Greenshot"; category = "Utilitaires" },
-    [PSCustomObject]@{ id = "AnyDesk.AnyDesk"; name = "AnyDesk"; category = "Utilitaires" },
-    
-    [PSCustomObject]@{ id = "Adobe.Acrobat.Reader.64-bit"; name = "Adobe Reader 64-bit"; category = "Bureautique" },
-    [PSCustomObject]@{ id = "PDF24.PDF24Creator"; name = "PDF24 Creator"; category = "Bureautique" },
-    [PSCustomObject]@{ id = "LibreOffice.LibreOffice"; name = "LibreOffice"; category = "Bureautique" }
+    [PSCustomObject]@{ id = "OBSProject.OBSStudio"; name = "OBS Studio"; category = "Multimedia" },
+    [PSCustomObject]@{ id = "Spotify.Spotify"; name = "Spotify"; category = "Multimedia" },
+    [PSCustomObject]@{ id = "HandBrake.HandBrake"; name = "HandBrake"; category = "Multimedia" },
+    [PSCustomObject]@{ id = "Audacity.Audacity"; name = "Audacity"; category = "Multimedia" },
+
+    # Utilitaires & Systeme
+    [PSCustomObject]@{ id = "7zip.7zip"; name = "7-Zip"; category = "Utilitaires & Systeme" },
+    [PSCustomObject]@{ id = "RARLab.WinRAR"; name = "WinRAR"; category = "Utilitaires & Systeme" },
+    [PSCustomObject]@{ id = "pbatard.rufus"; name = "Rufus"; category = "Utilitaires & Systeme" },
+    [PSCustomObject]@{ id = "balena.etcher"; name = "BalenaEtcher"; category = "Utilitaires & Systeme" },
+    [PSCustomObject]@{ id = "Microsoft.PowerToys"; name = "Microsoft PowerToys"; category = "Utilitaires & Systeme" },
+    [PSCustomObject]@{ id = "AntibodySoftware.WizTree"; name = "WizTree"; category = "Utilitaires & Systeme" },
+    [PSCustomObject]@{ id = "JAMSoftware.TreeSize.Free"; name = "TreeSize Free"; category = "Utilitaires & Systeme" },
+    [PSCustomObject]@{ id = "BleachBit.BleachBit"; name = "BleachBit"; category = "Utilitaires & Systeme" },
+
+    # Dev & Reseau
+    [PSCustomObject]@{ id = "Git.Git"; name = "Git"; category = "Dev & Reseau" },
+    [PSCustomObject]@{ id = "OpenJS.NodeJS"; name = "Node.js"; category = "Dev & Reseau" },
+    [PSCustomObject]@{ id = "Python.Python.3.12"; name = "Python 3.12"; category = "Dev & Reseau" },
+    [PSCustomObject]@{ id = "FileZilla.FileZilla"; name = "FileZilla Client"; category = "Dev & Reseau" },
+    [PSCustomObject]@{ id = "SimonTatham.PuTTY"; name = "PuTTY"; category = "Dev & Reseau" },
+    [PSCustomObject]@{ id = "WiresharkFoundation.Wireshark"; name = "Wireshark"; category = "Dev & Reseau" },
+    [PSCustomObject]@{ id = "Famatech.AdvancedIPScanner"; name = "Advanced IP Scanner"; category = "Dev & Reseau" },
+
+    # Runtimes
+    [PSCustomObject]@{ id = "Oracle.JavaRuntimeEnvironment"; name = "Java JRE"; category = "Runtimes" },
+    [PSCustomObject]@{ id = "Microsoft.DotNet.DesktopRuntime.8"; name = ".NET Desktop Runtime 8"; category = "Runtimes" }
 )
 
 
@@ -213,6 +252,7 @@ $global:WingetAppsList = @(
                     <Button Name="BtnTabOptane" Style="{StaticResource SidebarButton}" Content="⚙️  Pilotes / Optane"/>
                     <Button Name="BtnTabTools" Style="{StaticResource SidebarButton}" Content="🧰  Outils Tiers"/>
                     <Button Name="BtnTabDownloads" Style="{StaticResource SidebarButton}" Content="📥  Téléchargements"/>
+                    <Button Name="BtnTabWinget" Style="{StaticResource SidebarButton}" Content="📦  Applications (Winget)"/>
                 </StackPanel>
 
                 <!-- Status / Version footer -->
@@ -672,17 +712,9 @@ $global:WingetAppsList = @(
                         </StackPanel>
                     </Grid>
 
-                    <!-- ScrollViewer contenant deux sections distinctes : Boite a Outils et Logiciels Client -->
+                    <!-- ScrollViewer contenant la liste des telechargements de la boite a outils -->
                     <ScrollViewer Grid.Row="1" Background="#1E1E24" BorderBrush="#444455" BorderThickness="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="10">
-                        <StackPanel>
-                            <!-- Section 1 : Boite a outils -->
-                            <TextBlock Text="📂 OUTILS DE DEPANNEUR (TELECHARGES DANS LA BOITE A OUTILS)" FontSize="14" FontWeight="Bold" Foreground="#00adb5" Margin="5,0,0,10"/>
-                            <WrapPanel Name="WrapDownloads" Margin="0,0,0,25"/>
-                            
-                            <!-- Section 2 : Logiciels client (Winget) -->
-                            <TextBlock Text="💻 LOGICIELS DU CLIENT (INSTALLATION DIRECTE SUR CE PC VIA WINGET)" FontSize="14" FontWeight="Bold" Foreground="#00adb5" Margin="5,15,0,10"/>
-                            <WrapPanel Name="WrapWingetApps" Margin="0"/>
-                        </StackPanel>
+                        <WrapPanel Name="WrapDownloads" Margin="0"/>
                     </ScrollViewer>
 
                     <!-- Barre de progression de téléchargement et boutons d'action -->
@@ -712,6 +744,65 @@ $global:WingetAppsList = @(
                             </Grid>
 
                             <ProgressBar Grid.Row="2" Name="ProgressDownload" Height="15" Background="#1A1A22" Foreground="#00D2C4" BorderThickness="0"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- Onglet WINGET CLIENT INSTALLER (Style Chris Titus) -->
+                <Grid Name="GridWinget" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- En-tete -->
+                    <Grid Grid.Row="0" Margin="0,0,0,15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Installateur de Logiciels Client (Winget)" FontSize="22" FontWeight="Bold" Foreground="White"/>
+                            <TextBlock Text="Installez silencieusement des applications populaires directement sur le PC client via Windows Package Manager (Winget)." Foreground="#AAAAAA" FontSize="11" Margin="0,5,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Name="BtnRefreshWinget" Style="{StaticResource SecondaryButton}" Content="🔄 Rafraichir les statuts" Height="30" Padding="15,0,15,0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- ScrollViewer contenant les categories d'applications -->
+                    <ScrollViewer Grid.Row="1" Background="#1E1E24" BorderBrush="#444455" BorderThickness="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="10">
+                        <WrapPanel Name="WrapWingetCategories" Margin="0"/>
+                    </ScrollViewer>
+
+                    <!-- Barre de progression et boutons d'action -->
+                    <Border Grid.Row="2" Background="#252530" CornerRadius="5" Padding="15" Margin="0,15,0,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Boutons d'action -->
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+                                <Button Name="BtnWingetInstallSelected" Style="{StaticResource ModernButton}" Content="⬇️ Installer la selection" Height="30" Width="220" FontWeight="Bold" Margin="0,0,10,0"/>
+                                <Button Name="BtnWingetSelectAll" Style="{StaticResource SecondaryButton}" Content="Tout cocher" Height="30" Width="110" Margin="0,0,10,0"/>
+                                <Button Name="BtnWingetDeselectAll" Style="{StaticResource SecondaryButton}" Content="Tout decocher" Height="30" Width="110" Margin="0,0,10,0"/>
+                                <Button Name="BtnWingetSelectMissing" Style="{StaticResource SecondaryButton}" Content="Cocher les applications manquantes" Height="30" Width="250"/>
+                            </StackPanel>
+
+                            <Grid Grid.Row="1" Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Name="TxtWingetProgressStatus" Text="Selectionnez des logiciels ci-dessus et cliquez sur Installer..." Foreground="#CCCCCC" FontSize="12"/>
+                                <TextBlock Grid.Column="1" Name="TxtWingetProgressSpeed" Text="" Foreground="#00D2C4" FontSize="12" FontWeight="Bold"/>
+                            </Grid>
+
+                            <ProgressBar Grid.Row="2" Name="ProgressWinget" Height="15" Background="#1A1A22" Foreground="#00D2C4" BorderThickness="0"/>
                         </Grid>
                     </Border>
                 </Grid>
@@ -935,7 +1026,7 @@ $WPF_BtnChangePath.Add_Click({
 })
 
 # --- Logique de navigation des onglets ---
-$Grids = @($WPF_GridDiag, $WPF_GridClean, $WPF_GridRepair, $WPF_GridApps, $WPF_GridBackup, $WPF_GridOptane, $WPF_GridTools, $WPF_GridDownloads)
+$Grids = @($WPF_GridDiag, $WPF_GridClean, $WPF_GridRepair, $WPF_GridApps, $WPF_GridBackup, $WPF_GridOptane, $WPF_GridTools, $WPF_GridDownloads, $WPF_GridWinget)
 
 function Show-Tab ($activeGrid) {
     foreach ($grid in $Grids) {
@@ -962,6 +1053,10 @@ $WPF_BtnTabTools.Add_Click({ Show-Tab $WPF_GridTools })
 $WPF_BtnTabDownloads.Add_Click({ 
     Show-Tab $WPF_GridDownloads
     Populate-Downloads
+})
+$WPF_BtnTabWinget.Add_Click({ 
+    Show-Tab $WPF_GridWinget
+    Populate-Winget
 })
 
 # --- LOGIQUE ONGLET : SCANNERS & DESINSTALLATION ---
@@ -1259,7 +1354,6 @@ $WPF_BtnOpenDownloadLog.Add_Click({
 function Populate-Downloads {
     if ([string]::IsNullOrEmpty($Config.ToolsPath)) {
         $WPF_WrapDownloads.Children.Clear()
-        $WPF_WrapWingetApps.Children.Clear()
         $lbl = New-Object System.Windows.Controls.Label
         $lbl.Content = "Veuillez selectionner un dossier racine valide pour les outils dans la sidebar."
         $lbl.Foreground = [System.Windows.Media.Brushes]::Red
@@ -1271,17 +1365,11 @@ function Populate-Downloads {
 
     $WPF_TxtProgressStatus.Text = "Chargement du catalogue des versions..."
     $WPF_WrapDownloads.Children.Clear()
-    $WPF_WrapWingetApps.Children.Clear()
-    
     $global:DownloadCheckBoxes = @{}
     $global:DownloadStatuses = @{}
-    
-    $global:WingetCheckBoxes = @{}
-    $global:WingetStatuses = @{}
 
     $BrushConverter = New-Object System.Windows.Media.BrushConverter
 
-    # 1. PEUPLEMENT DES TELECHARGEMENTS BOITE A OUTILS
     try {
         $catalogUrl = "https://raw.githubusercontent.com/john2k/JDS-Repair-Toolkit/main/versions.json?t=" + [DateTime]::Now.Ticks
         $curlOutput = & curl.exe -L -k -s $catalogUrl
@@ -1290,13 +1378,18 @@ function Populate-Downloads {
             throw "Reponse JSON invalide ou vide"
         }
         $global:GlobalToolsList = $jsonContent | ConvertFrom-Json
+        Log-Download "[OK] Catalogue de telechargement charge. $($global:GlobalToolsList.Count) outils references."
     } catch {
         $WPF_TxtProgressStatus.Text = "Echec du chargement du catalogue via curl : $($_.Exception.Message)"
+        Log-Download "[!!] Echec du chargement du catalogue versions.json en ligne : $($_.Exception.Message)"
         return
     }
 
+    $WPF_TxtProgressStatus.Text = "Analyse des fichiers locaux et comparaison..."
     $groupedTools = $global:GlobalToolsList | Group-Object category
+
     foreach ($group in $groupedTools) {
+        # GroupBox style Christitus
         $gb = New-Object System.Windows.Controls.GroupBox
         $gb.Width = 270
         $gb.Margin = 5
@@ -1339,6 +1432,7 @@ function Populate-Downloads {
             $localFile = Join-Path $dirPath $filename
             
             $localVer = Get-LocalToolVersion -filePath $localFile
+            
             $statusText = ""
             $colorBrush = $null
             $shouldCheck = $false
@@ -1360,6 +1454,7 @@ function Populate-Downloads {
 
             $global:DownloadStatuses[$tool.id] = $statusText
 
+            # Grid de ligne d'application
             $itemGrid = New-Object System.Windows.Controls.Grid
             $itemGrid.Height = 28
             $itemGrid.Margin = "0,2,0,2"
@@ -1367,6 +1462,7 @@ function Populate-Downloads {
             $col0 = New-Object System.Windows.Controls.ColumnDefinition; $col0.Width = New-Object System.Windows.GridLength(145); $itemGrid.ColumnDefinitions.Add($col0)
             $col1 = New-Object System.Windows.Controls.ColumnDefinition; $col1.Width = New-Object System.Windows.GridLength(95); $itemGrid.ColumnDefinitions.Add($col1)
 
+            # CheckBox
             $chk = New-Object System.Windows.Controls.CheckBox
             $chk.Content = $tool.name
             $chk.Foreground = [System.Windows.Media.Brushes]::White
@@ -1377,6 +1473,7 @@ function Populate-Downloads {
 
             $global:DownloadCheckBoxes[$tool.id] = $chk
 
+            # Version/Status Block
             $spVer = New-Object System.Windows.Controls.StackPanel
             $spVer.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
             $spVer.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
@@ -1404,105 +1501,7 @@ function Populate-Downloads {
         [void]$WPF_WrapDownloads.Children.Add($gb)
     }
 
-    # 2. PEUPLEMENT DES LOGICIELS CLIENTS (WINGET)
-    $WPF_TxtProgressStatus.Text = "Analyse des applications installees localement via winget..."
-    
-    $installedList = ""
-    try {
-        $installedList = & winget.exe list --accept-source-agreements 2>$null | Out-String
-    } catch {}
-
-    $groupedWinget = $global:WingetAppsList | Group-Object category
-    foreach ($group in $groupedWinget) {
-        $gb = New-Object System.Windows.Controls.GroupBox
-        $gb.Width = 270
-        $gb.Margin = 5
-        $gb.Background = $BrushConverter.ConvertFromString("#1a1a24")
-        $gb.BorderBrush = $BrushConverter.ConvertFromString("#444455")
-        $gb.Foreground = [System.Windows.Media.Brushes]::White
-        
-        $emoji = [string]([char]0xD83D) + [string]([char]0xDCC1) # 📁
-        switch ($group.Name) {
-            "Navigateurs" { $emoji = "🌐" }
-            "Multimedia"  { $emoji = "🎬" }
-            "Utilitaires"  { $emoji = "⚙️" }
-            "Bureautique"  { $emoji = "📝" }
-        }
-
-        $headerText = New-Object System.Windows.Controls.TextBlock
-        $headerText.Text = "$emoji  $($group.Name.ToUpper())"
-        $headerText.FontWeight = [System.Windows.FontWeights]::Bold
-        $headerText.Foreground = $BrushConverter.ConvertFromString("#00adb5")
-        $gb.Header = $headerText
-
-        $sp = New-Object System.Windows.Controls.StackPanel
-        $sp.Margin = 5
-
-        foreach ($app in $group.Group) {
-            $isInstalled = $false
-            if ($installedList -and $installedList -match [regex]::Escape($app.id)) {
-                $isInstalled = $true
-            }
-            
-            $statusText = ""
-            $colorBrush = $null
-            if ($isInstalled) {
-                $statusText = "Installe"
-                $colorBrush = [System.Windows.Media.Brushes]::LightGreen
-            } else {
-                $statusText = "Non installe"
-                $colorBrush = [System.Windows.Media.Brushes]::Gray
-            }
-            
-            $global:WingetStatuses[$app.id] = $statusText
-
-            $itemGrid = New-Object System.Windows.Controls.Grid
-            $itemGrid.Height = 28
-            $itemGrid.Margin = "0,2,0,2"
-            
-            $col0 = New-Object System.Windows.Controls.ColumnDefinition; $col0.Width = New-Object System.Windows.GridLength(145); $itemGrid.ColumnDefinitions.Add($col0)
-            $col1 = New-Object System.Windows.Controls.ColumnDefinition; $col1.Width = New-Object System.Windows.GridLength(95); $itemGrid.ColumnDefinitions.Add($col1)
-
-            # CheckBox (toujours decocher par defaut pour eviter les installs accidentelles sur le PC client)
-            $chk = New-Object System.Windows.Controls.CheckBox
-            $chk.Content = $app.name
-            $chk.Foreground = [System.Windows.Media.Brushes]::White
-            $chk.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-            $chk.IsChecked = $false
-            [System.Windows.Controls.Grid]::SetColumn($chk, 0)
-            $itemGrid.Children.Add($chk) | Out-Null
-
-            $global:WingetCheckBoxes[$app.id] = $chk
-
-            # ID / Status block
-            $spVer = New-Object System.Windows.Controls.StackPanel
-            $spVer.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-            $spVer.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
-
-            $txtID = New-Object System.Windows.Controls.TextBlock
-            $txtID.Text = $app.id
-            $txtID.Foreground = [System.Windows.Media.Brushes]::Gray
-            $txtID.FontSize = 8
-
-            $txtStat = New-Object System.Windows.Controls.TextBlock
-            $txtStat.Text = $statusText
-            $txtStat.Foreground = $colorBrush
-            $txtStat.FontSize = 9
-            $txtStat.FontWeight = [System.Windows.FontWeights]::SemiBold
-
-            $spVer.Children.Add($txtID) | Out-Null
-            $spVer.Children.Add($txtStat) | Out-Null
-            [System.Windows.Controls.Grid]::SetColumn($spVer, 1)
-            $itemGrid.Children.Add($spVer) | Out-Null
-
-            $sp.Children.Add($itemGrid) | Out-Null
-        }
-
-        $gb.Content = $sp
-        [void]$WPF_WrapWingetApps.Children.Add($gb)
-    }
-
-    $WPF_TxtProgressStatus.Text = "Pret (Selectionnez vos outils puis lancez le traitement)."
+    $WPF_TxtProgressStatus.Text = "Pret (Selectionnez vos outils puis lancez le telechargement)."
 }
 
 # Lancer le téléchargement asynchrone non-bloquant de l'outil via curl.exe avec suivi de taille et écriture de log
@@ -1583,7 +1582,7 @@ function Download-PersistentTool {
             if ($exitCode -ne 0 -or -not (Test-Path $tempFilePath) -or (Get-Item $tempFilePath).Length -lt 10KB) {
                 $fileLength = 0
                 if (Test-Path $tempFilePath) { $fileLength = (Get-Item $tempFilePath).Length }
-                $WPF_TxtProgressStatus.Text = "Echec du telechargement de $($tool.name) (Code curl: $exitCode)."
+                $WPF_TxtProgressStatus.Text = "Echec du telechargement de $($tool.name) (Code: $exitCode)."
                 $WPF_TxtProgressSpeed.Text = ""
                 $WPF_ProgressDownload.Value = 0
                 Log-Download "[!!] ECHEC du telechargement de $($tool.name). Taille: $fileLength octets."
@@ -1714,12 +1713,12 @@ function Install-WingetApp {
     $timer.Start()
 }
 
-# Gestionnaire de file d'attente pour le telechargement en lot (toolbox + winget)
+# Gestionnaire de file d'attente pour le telechargement en lot (toolbox uniquement)
 $global:DownloadQueue = [System.Collections.Generic.Queue[string]]::new()
 
 function Process-DownloadQueue {
     if ($global:DownloadQueue.Count -eq 0) {
-        $WPF_TxtProgressStatus.Text = "Tous les traitements selectionnes sont termines !"
+        $WPF_TxtProgressStatus.Text = "Tous les telechargements selectionnes sont termines !"
         $WPF_TxtProgressSpeed.Text = ""
         $WPF_ProgressDownload.Value = 100
         
@@ -1732,44 +1731,26 @@ function Process-DownloadQueue {
         return
     }
 
-    $next = $global:DownloadQueue.Dequeue()
-    if ($next.StartsWith("winget:")) {
-        $wingetId = $next.Substring(7)
-        Install-WingetApp -AppId $wingetId
-    } else {
-        $toolId = $next
-        if ($next.StartsWith("toolbox:")) {
-            $toolId = $next.Substring(8)
-        }
-        Download-PersistentTool -ToolId $toolId
-    }
+    $nextId = $global:DownloadQueue.Dequeue()
+    Download-PersistentTool -ToolId $nextId
 }
 
 $WPF_BtnRefreshDownloads.Add_Click({
     Populate-Downloads
 })
 
-# Tout cocher (Outillage + Applications client)
 $WPF_BtnSelectAll.Add_Click({
     if ($global:DownloadCheckBoxes) {
         foreach ($chk in $global:DownloadCheckBoxes.Values) { $chk.IsChecked = $true }
     }
-    if ($global:WingetCheckBoxes) {
-        foreach ($chk in $global:WingetCheckBoxes.Values) { $chk.IsChecked = $true }
-    }
 })
 
-# Tout decocher
 $WPF_BtnDeselectAll.Add_Click({
     if ($global:DownloadCheckBoxes) {
         foreach ($chk in $global:DownloadCheckBoxes.Values) { $chk.IsChecked = $false }
     }
-    if ($global:WingetCheckBoxes) {
-        foreach ($chk in $global:WingetCheckBoxes.Values) { $chk.IsChecked = $false }
-    }
 })
 
-# Cocher uniquement les outils a mettre a jour + les applis client non installees
 $WPF_BtnSelectUpdates.Add_Click({
     if ($global:DownloadCheckBoxes -and $global:DownloadStatuses) {
         foreach ($id in $global:DownloadCheckBoxes.Keys) {
@@ -1781,10 +1762,229 @@ $WPF_BtnSelectUpdates.Add_Click({
             }
         }
     }
+})
+
+$WPF_BtnDownloadSelected.Add_Click({
+    if (-not $global:DownloadCheckBoxes) { return }
+    $selectedIds = @()
+    foreach ($id in $global:DownloadCheckBoxes.Keys) {
+        if ($global:DownloadCheckBoxes[$id].IsChecked) {
+            $selectedIds += $id
+        }
+    }
+
+    if ($selectedIds.Count -eq 0) {
+        [System.Windows.MessageBox]::Show("Veuillez cocher au moins un outil a telecharger.", "Selection vide", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+        return
+    }
+
+    Log-Download "[>>] Telechargement en lot lance pour $($selectedIds.Count) outils."
+
+    $WPF_BtnDownloadSelected.IsEnabled = $false
+    $WPF_BtnSelectAll.IsEnabled = $false
+    $WPF_BtnDeselectAll.IsEnabled = $false
+    $WPF_BtnSelectUpdates.IsEnabled = $false
+
+    $global:DownloadQueue.Clear()
+    foreach ($id in $selectedIds) {
+        $global:DownloadQueue.Enqueue($id)
+    }
+
+    Process-DownloadQueue
+})
+
+# --- NOUVEL ONGLET DEDIE : INSTALLATEUR WINGET CLIENT (STYLE CHRIS TITUS) ---
+$global:WingetQueue = [System.Collections.Generic.Queue[string]]::new()
+$global:WingetCheckBoxes = @{}
+$global:WingetStatuses = @{}
+
+function Process-WingetQueue {
+    if ($global:WingetQueue.Count -eq 0) {
+        $WPF_TxtWingetProgressStatus.Text = "Toutes les installations de logiciels clients sont terminees !"
+        $WPF_TxtWingetProgressSpeed.Text = ""
+        $WPF_ProgressWinget.Value = 100
+        
+        $WPF_BtnWingetInstallSelected.IsEnabled = $true
+        $WPF_BtnWingetSelectAll.IsEnabled = $true
+        $WPF_BtnWingetDeselectAll.IsEnabled = $true
+        $WPF_BtnWingetSelectMissing.IsEnabled = $true
+        
+        Populate-Winget
+        return
+    }
+
+    $nextId = $global:WingetQueue.Dequeue()
+    
+    $appName = $nextId
+    $app = $global:WingetAppsList | Where-Object { $_.id -eq $nextId }
+    if ($app) { $appName = $app.name }
+
+    Log-Download "[>>] Installation locale via winget de : $appName ($nextId)..."
+    $WPF_TxtWingetProgressStatus.Text = "Installation de $appName..."
+    $WPF_TxtWingetProgressSpeed.Text = "Installation..."
+    $WPF_ProgressWinget.Value = 0
+    $WPF_ProgressWinget.IsIndeterminate = $true
+
+    $job = Start-ThreadJob -ArgumentList $nextId {
+        param($id)
+        & winget.exe install --id $id --silent --accept-package-agreements --accept-source-agreements
+        return $LASTEXITCODE
+    }
+
+    $timer = New-Object System.Windows.Threading.DispatcherTimer
+    $timer.Interval = [TimeSpan]::FromMilliseconds(500)
+    $timer.Add_Tick(({
+        if ($null -eq $job -or (Get-JobFinished -Job $job)) {
+            $timer.Stop()
+            $WPF_ProgressWinget.IsIndeterminate = $false
+            
+            $exitCode = Receive-Job -Job $job
+            if ($exitCode -eq 0 -or $exitCode -eq 2316632065 -or $exitCode -eq -1978335231) {
+                Log-Download "[OK] Installation de $appName terminee avec succes (Code: $exitCode)."
+                $WPF_TxtWingetProgressStatus.Text = "Installation de $appName terminee !"
+            } else {
+                Log-Download "[!!] ECHEC de l'installation de $appName (Code: $exitCode)."
+                $WPF_TxtWingetProgressStatus.Text = "Echec de l'installation de $appName (Code: $exitCode)."
+            }
+            $WPF_ProgressWinget.Value = 100
+            
+            Process-WingetQueue
+            return
+        }
+    }).GetNewClosure())
+
+    $timer.Start()
+}
+
+function Populate-Winget {
+    $WPF_TxtWingetProgressStatus.Text = "Verification des applications locales..."
+    $WPF_WrapWingetCategories.Children.Clear()
+    $global:WingetCheckBoxes.Clear()
+    $global:WingetStatuses.Clear()
+
+    $BrushConverter = New-Object System.Windows.Media.BrushConverter
+
+    $installedList = ""
+    try {
+        $installedList = & winget.exe list --accept-source-agreements 2>$null | Out-String
+    } catch {}
+
+    $groupedWinget = $global:WingetAppsList | Group-Object category
+    foreach ($group in $groupedWinget) {
+        $gb = New-Object System.Windows.Controls.GroupBox
+        $gb.Width = 270
+        $gb.Margin = 5
+        $gb.Background = $BrushConverter.ConvertFromString("#1a1a24")
+        $gb.BorderBrush = $BrushConverter.ConvertFromString("#444455")
+        $gb.Foreground = [System.Windows.Media.Brushes]::White
+        
+        $emoji = [string]([char]0xD83D) + [string]([char]0xDCC1) # 📁
+        switch ($group.Name) {
+            "Navigateurs" { $emoji = "🌐" }
+            "Communication"{ $emoji = "💬" }
+            "Bureautique & Docs"{ $emoji = "📝" }
+            "Multimedia"  { $emoji = "🎬" }
+            "Utilitaires & Systeme"  { $emoji = "⚙️" }
+            "Dev & Reseau" { $emoji = "💻" }
+            "Runtimes"     { $emoji = "💿" }
+        }
+
+        $headerText = New-Object System.Windows.Controls.TextBlock
+        $headerText.Text = "$emoji  $($group.Name.ToUpper())"
+        $headerText.FontWeight = [System.Windows.FontWeights]::Bold
+        $headerText.Foreground = $BrushConverter.ConvertFromString("#00adb5")
+        $gb.Header = $headerText
+
+        $sp = New-Object System.Windows.Controls.StackPanel
+        $sp.Margin = 5
+
+        foreach ($app in $group.Group) {
+            $isInstalled = $false
+            if ($installedList -and $installedList -match [regex]::Escape($app.id)) {
+                $isInstalled = $true
+            }
+            
+            $statusText = ""
+            $colorBrush = $null
+            if ($isInstalled) {
+                $statusText = "Installe"
+                $colorBrush = [System.Windows.Media.Brushes]::LightGreen
+            } else {
+                $statusText = "Non installe"
+                $colorBrush = [System.Windows.Media.Brushes]::Gray
+            }
+            
+            $global:WingetStatuses[$app.id] = $statusText
+
+            $itemGrid = New-Object System.Windows.Controls.Grid
+            $itemGrid.Height = 28
+            $itemGrid.Margin = "0,2,0,2"
+            
+            $col0 = New-Object System.Windows.Controls.ColumnDefinition; $col0.Width = New-Object System.Windows.GridLength(145); $itemGrid.ColumnDefinitions.Add($col0)
+            $col1 = New-Object System.Windows.Controls.ColumnDefinition; $col1.Width = New-Object System.Windows.GridLength(95); $itemGrid.ColumnDefinitions.Add($col1)
+
+            # CheckBox
+            $chk = New-Object System.Windows.Controls.CheckBox
+            $chk.Content = $app.name
+            $chk.Foreground = [System.Windows.Media.Brushes]::White
+            $chk.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+            $chk.IsChecked = $false
+            [System.Windows.Controls.Grid]::SetColumn($chk, 0)
+            $itemGrid.Children.Add($chk) | Out-Null
+
+            $global:WingetCheckBoxes[$app.id] = $chk
+
+            # Status right block
+            $spVer = New-Object System.Windows.Controls.StackPanel
+            $spVer.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+            $spVer.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+
+            $txtID = New-Object System.Windows.Controls.TextBlock
+            $txtID.Text = $app.id
+            $txtID.Foreground = [System.Windows.Media.Brushes]::Gray
+            $txtID.FontSize = 8
+
+            $txtStat = New-Object System.Windows.Controls.TextBlock
+            $txtStat.Text = $statusText
+            $txtStat.Foreground = $colorBrush
+            $txtStat.FontSize = 9
+            $txtStat.FontWeight = [System.Windows.FontWeights]::SemiBold
+
+            $spVer.Children.Add($txtID) | Out-Null
+            $spVer.Children.Add($txtStat) | Out-Null
+            [System.Windows.Controls.Grid]::SetColumn($spVer, 1)
+            $itemGrid.Children.Add($spVer) | Out-Null
+
+            $sp.Children.Add($itemGrid) | Out-Null
+        }
+
+        $gb.Content = $sp
+        [void]$WPF_WrapWingetCategories.Children.Add($gb)
+    }
+
+    $WPF_TxtWingetProgressStatus.Text = "Pret (Cochez des logiciels clients et lancez l'installation)."
+}
+
+$WPF_BtnRefreshWinget.Add_Click({
+    Populate-Winget
+})
+
+$WPF_BtnWingetSelectAll.Add_Click({
+    if ($global:WingetCheckBoxes) {
+        foreach ($chk in $global:WingetCheckBoxes.Values) { $chk.IsChecked = $true }
+    }
+})
+
+$WPF_BtnWingetDeselectAll.Add_Click({
+    if ($global:WingetCheckBoxes) {
+        foreach ($chk in $global:WingetCheckBoxes.Values) { $chk.IsChecked = $false }
+    }
+})
+
+$WPF_BtnWingetSelectMissing.Add_Click({
     if ($global:WingetCheckBoxes -and $global:WingetStatuses) {
         foreach ($id in $global:WingetCheckBoxes.Keys) {
-            $status = $global:WingetStatuses[$id]
-            if ($status -eq "Non installe") {
+            if ($global:WingetStatuses[$id] -eq "Non installe") {
                 $global:WingetCheckBoxes[$id].IsChecked = $true
             } else {
                 $global:WingetCheckBoxes[$id].IsChecked = $false
@@ -1793,49 +1993,33 @@ $WPF_BtnSelectUpdates.Add_Click({
     }
 })
 
-# Lancer le traitement de la selection
-$WPF_BtnDownloadSelected.Add_Click({
-    $selectedToolboxIds = @()
-    if ($global:DownloadCheckBoxes) {
-        foreach ($id in $global:DownloadCheckBoxes.Keys) {
-            if ($global:DownloadCheckBoxes[$id].IsChecked) {
-                $selectedToolboxIds += "toolbox:$id"
-            }
-        }
-    }
-    
-    $selectedWingetIds = @()
-    if ($global:WingetCheckBoxes) {
-        foreach ($id in $global:WingetCheckBoxes.Keys) {
-            if ($global:WingetCheckBoxes[$id].IsChecked) {
-                $selectedWingetIds += "winget:$id"
-            }
+$WPF_BtnWingetInstallSelected.Add_Click({
+    if (-not $global:WingetCheckBoxes) { return }
+    $selectedIds = @()
+    foreach ($id in $global:WingetCheckBoxes.Keys) {
+        if ($global:WingetCheckBoxes[$id].IsChecked) {
+            $selectedIds += $id
         }
     }
 
-    $totalCount = $selectedToolboxIds.Count + $selectedWingetIds.Count
-    if ($totalCount -eq 0) {
-        [System.Windows.MessageBox]::Show("Veuillez cocher au moins un element a traiter.", "Selection vide", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+    if ($selectedIds.Count -eq 0) {
+        [System.Windows.MessageBox]::Show("Veuillez cocher au moins un logiciel a installer.", "Selection vide", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
         return
     }
 
-    Log-Download "[>>] Lancement du traitement en lot pour $totalCount elements."
+    Log-Download "[>>] Installation en lot lancee pour $($selectedIds.Count) logiciels via winget."
 
-    $WPF_BtnDownloadSelected.IsEnabled = $false
-    $WPF_BtnSelectAll.IsEnabled = $false
-    $WPF_BtnDeselectAll.IsEnabled = $false
-    $WPF_BtnSelectUpdates.IsEnabled = $false
+    $WPF_BtnWingetInstallSelected.IsEnabled = $false
+    $WPF_BtnWingetSelectAll.IsEnabled = $false
+    $WPF_BtnWingetDeselectAll.IsEnabled = $false
+    $WPF_BtnWingetSelectMissing.IsEnabled = $false
 
-    $global:DownloadQueue.Clear()
-    # Mettre d'abord les téléchargements de la boîte à outils, puis les installations client
-    foreach ($id in $selectedToolboxIds) {
-        $global:DownloadQueue.Enqueue($id)
-    }
-    foreach ($id in $selectedWingetIds) {
-        $global:DownloadQueue.Enqueue($id)
+    $global:WingetQueue.Clear()
+    foreach ($id in $selectedIds) {
+        $global:WingetQueue.Enqueue($id)
     }
 
-    Process-DownloadQueue
+    Process-WingetQueue
 })
 
 # --- ONGLET 1 : DIAGNOSTICS ---
