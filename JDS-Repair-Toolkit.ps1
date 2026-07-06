@@ -116,6 +116,7 @@ $global:WingetAppsList = @(
     [PSCustomObject]@{ id = "Microsoft.Edge"; name = "Microsoft Edge"; category = "Navigateurs" },
     [PSCustomObject]@{ id = "Vivaldi.Vivaldi"; name = "Vivaldi"; category = "Navigateurs" },
     [PSCustomObject]@{ id = "Opera.Opera"; name = "Opera"; category = "Navigateurs" },
+    [PSCustomObject]@{ id = "TorProject.TorBrowser"; name = "Tor Browser"; category = "Navigateurs" },
 
     # Communication
     [PSCustomObject]@{ id = "Discord.Discord"; name = "Discord"; category = "Communication" },
@@ -124,14 +125,18 @@ $global:WingetAppsList = @(
     [PSCustomObject]@{ id = "Slack.Slack"; name = "Slack"; category = "Communication" },
     [PSCustomObject]@{ id = "Telegram.TelegramDesktop"; name = "Telegram"; category = "Communication" },
     [PSCustomObject]@{ id = "Signal.Signal"; name = "Signal"; category = "Communication" },
+    [PSCustomObject]@{ id = "WhatsApp.WhatsApp"; name = "WhatsApp"; category = "Communication" },
+    [PSCustomObject]@{ id = "Microsoft.Skype"; name = "Skype"; category = "Communication" },
 
-    # Bureautique / Dev
+    # Bureautique & Docs
     [PSCustomObject]@{ id = "Adobe.Acrobat.Reader.64-bit"; name = "Adobe Reader 64-bit"; category = "Bureautique & Docs" },
     [PSCustomObject]@{ id = "PDF24.PDF24Creator"; name = "PDF24 Creator"; category = "Bureautique & Docs" },
     [PSCustomObject]@{ id = "LibreOffice.LibreOffice"; name = "LibreOffice"; category = "Bureautique & Docs" },
     [PSCustomObject]@{ id = "Notepad++.Notepad++"; name = "Notepad++"; category = "Bureautique & Docs" },
     [PSCustomObject]@{ id = "Microsoft.VisualStudioCode"; name = "VS Code"; category = "Bureautique & Docs" },
     [PSCustomObject]@{ id = "TrackerSoftware.PDF-XChangeEditor"; name = "PDF-XChange Editor"; category = "Bureautique & Docs" },
+    [PSCustomObject]@{ id = "Greenshot.Greenshot"; name = "Greenshot"; category = "Bureautique & Docs" },
+    [PSCustomObject]@{ id = "Mozilla.Thunderbird"; name = "Mozilla Thunderbird"; category = "Bureautique & Docs" },
 
     # Multimedia
     [PSCustomObject]@{ id = "VideoLAN.VLC"; name = "VLC Media Player"; category = "Multimedia" },
@@ -139,6 +144,10 @@ $global:WingetAppsList = @(
     [PSCustomObject]@{ id = "Spotify.Spotify"; name = "Spotify"; category = "Multimedia" },
     [PSCustomObject]@{ id = "HandBrake.HandBrake"; name = "HandBrake"; category = "Multimedia" },
     [PSCustomObject]@{ id = "Audacity.Audacity"; name = "Audacity"; category = "Multimedia" },
+    [PSCustomObject]@{ id = "GNU.GIMP"; name = "GIMP (Editeur)"; category = "Multimedia" },
+    [PSCustomObject]@{ id = "dotPDN.PaintDotNet"; name = "Paint.NET"; category = "Multimedia" },
+    [PSCustomObject]@{ id = "Plex.Plex"; name = "Plex Media Player"; category = "Multimedia" },
+    [PSCustomObject]@{ id = "CodecGuide.K-LiteCodecPack.Full"; name = "K-Lite Codec Pack Full"; category = "Multimedia" },
 
     # Utilitaires & Systeme
     [PSCustomObject]@{ id = "7zip.7zip"; name = "7-Zip"; category = "Utilitaires & Systeme" },
@@ -149,6 +158,21 @@ $global:WingetAppsList = @(
     [PSCustomObject]@{ id = "AntibodySoftware.WizTree"; name = "WizTree"; category = "Utilitaires & Systeme" },
     [PSCustomObject]@{ id = "JAMSoftware.TreeSize.Free"; name = "TreeSize Free"; category = "Utilitaires & Systeme" },
     [PSCustomObject]@{ id = "BleachBit.BleachBit"; name = "BleachBit"; category = "Utilitaires & Systeme" },
+    [PSCustomObject]@{ id = "Voidtools.Everything"; name = "Everything Search"; category = "Utilitaires & Systeme" },
+    [PSCustomObject]@{ id = "RevoUninstaller.RevoUninstaller"; name = "Revo Uninstaller"; category = "Utilitaires & Systeme" },
+    [PSCustomObject]@{ id = "CrystalDewWorld.CrystalDiskInfo"; name = "CrystalDiskInfo"; category = "Utilitaires & Systeme" },
+    [PSCustomObject]@{ id = "CrystalDewWorld.CrystalDiskMark"; name = "CrystalDiskMark"; category = "Utilitaires & Systeme" },
+    [PSCustomObject]@{ id = "CPUID.HWMonitor"; name = "HWMonitor"; category = "Utilitaires & Systeme" },
+    [PSCustomObject]@{ id = "CPUID.CPU-Z"; name = "CPU-Z"; category = "Utilitaires & Systeme" },
+    [PSCustomObject]@{ id = "TechPowerUp.GPU-Z"; name = "GPU-Z"; category = "Utilitaires & Systeme" },
+    [PSCustomObject]@{ id = "Piriform.CCleaner"; name = "CCleaner"; category = "Utilitaires & Systeme" },
+
+    # Jeux / Launchers
+    [PSCustomObject]@{ id = "Valve.Steam"; name = "Steam"; category = "Jeux & Launchers" },
+    [PSCustomObject]@{ id = "EpicGames.EpicGamesLauncher"; name = "Epic Games Launcher"; category = "Jeux & Launchers" },
+    [PSCustomObject]@{ id = "GOG.Galaxy"; name = "GOG Galaxy"; category = "Jeux & Launchers" },
+    [PSCustomObject]@{ id = "ElectronicArts.EADesktop"; name = "EA App"; category = "Jeux & Launchers" },
+    [PSCustomObject]@{ id = "Ubisoft.UbisoftConnect"; name = "Ubisoft Connect"; category = "Jeux & Launchers" },
 
     # Dev & Reseau
     [PSCustomObject]@{ id = "Git.Git"; name = "Git"; category = "Dev & Reseau" },
@@ -158,10 +182,15 @@ $global:WingetAppsList = @(
     [PSCustomObject]@{ id = "SimonTatham.PuTTY"; name = "PuTTY"; category = "Dev & Reseau" },
     [PSCustomObject]@{ id = "WiresharkFoundation.Wireshark"; name = "Wireshark"; category = "Dev & Reseau" },
     [PSCustomObject]@{ id = "Famatech.AdvancedIPScanner"; name = "Advanced IP Scanner"; category = "Dev & Reseau" },
+    [PSCustomObject]@{ id = "TeamViewer.TeamViewer"; name = "TeamViewer"; category = "Dev & Reseau" },
+    [PSCustomObject]@{ id = "RustDesk.RustDesk"; name = "RustDesk"; category = "Dev & Reseau" },
+    [PSCustomObject]@{ id = "WinSCP.WinSCP"; name = "WinSCP"; category = "Dev & Reseau" },
+    [PSCustomObject]@{ id = "Oracle.VirtualBox"; name = "VirtualBox"; category = "Dev & Reseau" },
 
     # Runtimes
     [PSCustomObject]@{ id = "Oracle.JavaRuntimeEnvironment"; name = "Java JRE"; category = "Runtimes" },
-    [PSCustomObject]@{ id = "Microsoft.DotNet.DesktopRuntime.8"; name = ".NET Desktop Runtime 8"; category = "Runtimes" }
+    [PSCustomObject]@{ id = "Microsoft.DotNet.DesktopRuntime.8"; name = ".NET Desktop Runtime 8"; category = "Runtimes" },
+    [PSCustomObject]@{ id = "Microsoft.VCRedist.2015+.x64"; name = "Visual C++ Redist (x64)"; category = "Runtimes" }
 )
 
 
@@ -1885,6 +1914,7 @@ function Populate-Winget {
             "Bureautique & Docs"{ $emoji = "📝" }
             "Multimedia"  { $emoji = "🎬" }
             "Utilitaires & Systeme"  { $emoji = "⚙️" }
+            "Jeux & Launchers" { $emoji = "🎮" }
             "Dev & Reseau" { $emoji = "💻" }
             "Runtimes"     { $emoji = "💿" }
         }
