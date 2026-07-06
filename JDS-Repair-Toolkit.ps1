@@ -845,9 +845,17 @@ $global:WingetAppsList = @(
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     
-                    <!-- En-tete -->
+<!-- En-tete -->
                     <Grid Grid.Row="0" Margin="0,0,0,15">
-                        <TextBlock Text="Optimisations du Systeme (Tweaks)" FontSize="22" FontWeight="Bold" Foreground="White"/>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Optimisations du Systeme (Tweaks)" FontSize="22" FontWeight="Bold" Foreground="White"/>
+                            <TextBlock Text="Appliquez des optimisations systeme ou lancez l'utilitaire officiel de Chris Titus Tech." Foreground="#AAAAAA" FontSize="11" Margin="0,5,0,0"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Name="BtnRunWinutil" Style="{StaticResource ModernButton}" Content="🚀 Lancer Winutil (Chris Titus)" Height="35" Padding="15,0,15,0" FontWeight="Bold"/>
                     </Grid>
 
                     <!-- ScrollViewer contenant les categories de tweaks -->
@@ -2632,6 +2640,12 @@ $WPF_BtnApplyTweaks.Add_Click({
         }
     }).GetNewClosure())
     $timer.Start()
+})
+
+# Lancer l'utilitaire de Chris Titus Tech dans une fenetre PowerShell elevee separee
+$WPF_BtnRunWinutil.Add_Click({
+    Log-Download "[>>] Lancement de l'utilitaire officiel Chris Titus Tech (Winutil) dans une nouvelle fenetre..."
+    Start-Process powershell -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "irm christitus.com/win | iex" -Verb RunAs
 })
 
 $Form.ShowDialog() | Out-Null
