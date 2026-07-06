@@ -653,27 +653,38 @@ $PredefinedPaths = @(
                         </StackPanel>
                     </Grid>
 
-                    <!-- Liste des outils -->
-                    <ListBox Grid.Row="1" Name="LstDownloads" Background="#1E1E24" BorderBrush="#444455" BorderThickness="1" Padding="5"/>
+                    <!-- Remplacement de LstDownloads par un ScrollViewer contenant un WrapPanel -->
+                    <ScrollViewer Grid.Row="1" Background="#1E1E24" BorderBrush="#444455" BorderThickness="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="10">
+                        <WrapPanel Name="WrapDownloads" Margin="0"/>
+                    </ScrollViewer>
 
-                    <!-- Barre de progression de téléchargement -->
+                    <!-- Barre de progression de téléchargement et boutons d'action -->
                     <Border Grid.Row="2" Background="#252530" CornerRadius="5" Padding="15" Margin="0,15,0,0">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             
-                            <Grid Grid.Row="0" Margin="0,0,0,8">
+                            <!-- Boutons d'action type Chris Titus -->
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+                                <Button Name="BtnDownloadSelected" Style="{StaticResource ModernButton}" Content="⬇️ Télécharger la sélection" Height="30" Width="220" FontWeight="Bold" Margin="0,0,10,0"/>
+                                <Button Name="BtnSelectAll" Style="{StaticResource SecondaryButton}" Content="Tout cocher" Height="30" Width="110" Margin="0,0,10,0"/>
+                                <Button Name="BtnDeselectAll" Style="{StaticResource SecondaryButton}" Content="Tout décocher" Height="30" Width="110" Margin="0,0,10,0"/>
+                                <Button Name="BtnSelectUpdates" Style="{StaticResource SecondaryButton}" Content="Sélectionner les mises à jour" Height="30" Width="200"/>
+                            </StackPanel>
+
+                            <Grid Grid.Row="1" Margin="0,0,0,8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Name="TxtProgressStatus" Text="Sélectionnez un outil pour démarrer..." Foreground="#CCCCCC" FontSize="12"/>
+                                <TextBlock Grid.Column="0" Name="TxtProgressStatus" Text="Sélectionnez des outils ci-dessus et cliquez sur Télécharger..." Foreground="#CCCCCC" FontSize="12"/>
                                 <TextBlock Grid.Column="1" Name="TxtProgressSpeed" Text="" Foreground="#00D2C4" FontSize="12" FontWeight="Bold"/>
                             </Grid>
 
-                            <ProgressBar Grid.Row="1" Name="ProgressDownload" Height="15" Background="#1A1A22" Foreground="#00D2C4" BorderThickness="0"/>
+                            <ProgressBar Grid.Row="2" Name="ProgressDownload" Height="15" Background="#1A1A22" Foreground="#00D2C4" BorderThickness="0"/>
                         </Grid>
                     </Border>
                 </Grid>
@@ -1220,78 +1231,78 @@ $WPF_BtnOpenDownloadLog.Add_Click({
 # Charger le catalogue et remplir la liste des téléchargements
 function Populate-Downloads {
     if ([string]::IsNullOrEmpty($Config.ToolsPath)) {
-        $WPF_LstDownloads.Items.Clear()
+        $WPF_WrapDownloads.Children.Clear()
         $lbl = New-Object System.Windows.Controls.Label
-        $lbl.Content = "Veuillez sélectionner un dossier racine valide pour les outils dans la sidebar."
+        $lbl.Content = "Veuillez selectionner un dossier racine valide pour les outils dans la sidebar."
         $lbl.Foreground = [System.Windows.Media.Brushes]::Red
         $lbl.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Center
         $lbl.Margin = 20
-        [void]$WPF_LstDownloads.Items.Add($lbl)
+        [void]$WPF_WrapDownloads.Children.Add($lbl)
         return
     }
 
     $WPF_TxtProgressStatus.Text = "Chargement du catalogue des versions..."
-    $WPF_LstDownloads.Items.Clear()
+    $WPF_WrapDownloads.Children.Clear()
+    $global:DownloadCheckBoxes = @{}
+    $global:DownloadStatuses = @{}
 
-    # Déclarer l'instance de BrushConverter pour la gestion des couleurs WPF
     $BrushConverter = New-Object System.Windows.Media.BrushConverter
 
-    # Charger versions.json depuis GitHub en temps réel (via curl.exe pour éviter les blocages SSL .NET)
     try {
         $catalogUrl = "https://raw.githubusercontent.com/john2k/JDS-Repair-Toolkit/main/versions.json?t=" + [DateTime]::Now.Ticks
         $curlOutput = & curl.exe -L -k -s $catalogUrl
         $jsonContent = $curlOutput -join "`n"
         if ([string]::IsNullOrEmpty($jsonContent) -or -not ($jsonContent.Trim().StartsWith("["))) {
-            throw "Réponse JSON invalide ou vide"
+            throw "Reponse JSON invalide ou vide"
         }
         $global:GlobalToolsList = $jsonContent | ConvertFrom-Json
-        Log-Download "[OK] Catalogue de téléchargement chargé. $($global:GlobalToolsList.Count) outils référencés."
+        Log-Download "[OK] Catalogue de telechargement charge. $($global:GlobalToolsList.Count) outils references."
     } catch {
-        $WPF_TxtProgressStatus.Text = "Échec du chargement du catalogue via curl : $($_.Exception.Message)"
-        Log-Download "[!!] Échec du chargement du catalogue versions.json en ligne : $($_.Exception.Message)"
+        $WPF_TxtProgressStatus.Text = "Echec du chargement du catalogue via curl : $($_.Exception.Message)"
+        Log-Download "[!!] Echec du chargement du catalogue versions.json en ligne : $($_.Exception.Message)"
         return
     }
 
     $WPF_TxtProgressStatus.Text = "Analyse des fichiers locaux et comparaison..."
-
     $groupedTools = $global:GlobalToolsList | Group-Object category
 
     foreach ($group in $groupedTools) {
-        # En-tete de section/categorie
-        $headerBorder = New-Object System.Windows.Controls.Border
-        $headerBorder.Background = $BrushConverter.ConvertFromString("#1a1a24")
-        $headerBorder.BorderBrush = $BrushConverter.ConvertFromString("#00adb5")
-        $headerBorder.BorderThickness = New-Object System.Windows.Thickness(3,0,0,0)
-        $headerBorder.Padding = New-Object System.Windows.Thickness(12,6,12,6)
-        $headerBorder.Margin = New-Object System.Windows.Thickness(0,12,0,8)
+        # GroupBox style Christitus
+        $gb = New-Object System.Windows.Controls.GroupBox
+        $gb.Width = 270
+        $gb.Margin = 5
+        $gb.Background = $BrushConverter.ConvertFromString("#1a1a24")
+        $gb.BorderBrush = $BrushConverter.ConvertFromString("#444455")
+        $gb.Foreground = [System.Windows.Media.Brushes]::White
         
-        $emoji = [string]([char]0xD83D) + [string]([char]0xDCC1) # Default folder emoji ðŸ“
+        $emoji = [string]([char]0xD83D) + [string]([char]0xDCC1) # 📁
         $catName = $group.Name
         $desinf = "D" + [char]0xE9 + "sinfection"
         $syst = "Syst" + [char]0xEA + "me"
         $reseau = "R" + [char]0xE9 + "seau"
         
         if ($catName -eq $desinf) {
-            $emoji = [string]([char]0xD83D) + [string]([char]0xDEE1) # ðŸ›¡ï¸
+            $emoji = [string]([char]0xD83D) + [string]([char]0xDEE1) # 🛡️
         } elseif ($catName -eq "Diagnostics") {
-            $emoji = [string]([char]0xD83D) + [string]([char]0xDCCB) # ðŸ“‹
+            $emoji = [string]([char]0xD83D) + [string]([char]0xDCCB) # 📋
         } elseif ($catName -eq "Pilotes") {
-            $emoji = [string]([char]0x2699) # âš™ï¸
+            $emoji = [string]([char]0x2699) # ⚙️
         } elseif ($catName -eq $syst) {
-            $emoji = [string]([char]0xD83D) + [string]([char]0xDCBB) # ðŸ’»
+            $emoji = [string]([char]0xD83D) + [string]([char]0xDCBB) # 💻
         } elseif ($catName -eq $reseau) {
-            $emoji = [string]([char]0xD83C) + [string]([char]0xDF10) # ðŸŒ
+            $emoji = [string]([char]0xD83C) + [string]([char]0xDF10) # 🌐
         } elseif ($catName -eq "Bureautique") {
-            $emoji = [string]([char]0x270D) # ðŸ“
+            $emoji = [string]([char]0x270D) # 📝
         }
 
         $headerText = New-Object System.Windows.Controls.TextBlock
         $headerText.Text = "$emoji  $($group.Name.ToUpper())"
         $headerText.FontWeight = [System.Windows.FontWeights]::Bold
         $headerText.Foreground = $BrushConverter.ConvertFromString("#00adb5")
-        $headerText.FontSize = 13
-        $headerBorder.Child = $headerText
-        [void]$WPF_LstDownloads.Items.Add($headerBorder)
+        $gb.Header = $headerText
+
+        $sp = New-Object System.Windows.Controls.StackPanel
+        $sp.Margin = 5
 
         foreach ($tool in $group.Group) {
             $dirPath = Join-Path $Config.ToolsPath "Logiciels\$($tool.folder)"
@@ -1303,7 +1314,6 @@ function Populate-Downloads {
             if (-not (Test-Path $localFile) -and (Test-Path $oldFile)) {
                 try {
                     Rename-Item -Path $oldFile -NewName $filename -Force -ErrorAction SilentlyContinue
-                    Log-Download "[Migration] Fichier renomme automatiquement de $($tool.id).exe vers $filename"
                 } catch {}
             }
             
@@ -1311,104 +1321,73 @@ function Populate-Downloads {
             
             $statusText = ""
             $colorBrush = $null
-            $btnText = ""
-            $btnEnabled = $true
+            $shouldCheck = $false
 
             if ($localVer -eq "Absent") {
                 $statusText = "Non installe"
                 $colorBrush = [System.Windows.Media.Brushes]::Red
-                $btnText = "Telecharger"
+                $shouldCheck = $true
             } else {
                 if ($localVer -eq $tool.version -or $localVer -eq "Present") {
                     $statusText = "A jour"
                     $colorBrush = [System.Windows.Media.Brushes]::LightGreen
-                    $btnText = "Reinstaller"
                 } else {
-                    $statusText = "Mise a jour disponible"
+                    $statusText = "Maj dispo"
                     $colorBrush = [System.Windows.Media.Brushes]::Orange
-                    $btnText = "Mettre a jour"
+                    $shouldCheck = $true
                 }
             }
 
-            # Creer le template WPF programmatiquement
+            $global:DownloadStatuses[$tool.id] = $statusText
+
+            # Grid de ligne d'application
             $itemGrid = New-Object System.Windows.Controls.Grid
-            $itemGrid.Margin = "5"
+            $itemGrid.Height = 28
+            $itemGrid.Margin = "0,2,0,2"
             
-            $col0 = New-Object System.Windows.Controls.ColumnDefinition; $col0.Width = New-Object System.Windows.GridLength(320); $itemGrid.ColumnDefinitions.Add($col0)
-            $col1 = New-Object System.Windows.Controls.ColumnDefinition; $col1.Width = New-Object System.Windows.GridLength(180); $itemGrid.ColumnDefinitions.Add($col1)
-            $col2 = New-Object System.Windows.Controls.ColumnDefinition; $col2.Width = New-Object System.Windows.GridLength(150); $itemGrid.ColumnDefinitions.Add($col2)
-            $col3 = New-Object System.Windows.Controls.ColumnDefinition; $col3.Width = [System.Windows.GridLength]::Auto; $itemGrid.ColumnDefinitions.Add($col3)
+            $col0 = New-Object System.Windows.Controls.ColumnDefinition; $col0.Width = New-Object System.Windows.GridLength(145); $itemGrid.ColumnDefinitions.Add($col0)
+            $col1 = New-Object System.Windows.Controls.ColumnDefinition; $col1.Width = New-Object System.Windows.GridLength(95); $itemGrid.ColumnDefinitions.Add($col1)
 
-            # Name block
-            $spName = New-Object System.Windows.Controls.StackPanel
-            $txtName = New-Object System.Windows.Controls.TextBlock; $txtName.Text = $tool.name; $txtName.FontWeight = [System.Windows.FontWeights]::Bold; $txtName.Foreground = [System.Windows.Media.Brushes]::White; $txtName.FontSize = 13
-            $txtCat = New-Object System.Windows.Controls.TextBlock; $txtCat.Text = $tool.category; $txtCat.Foreground = [System.Windows.Media.Brushes]::Gray; $txtCat.FontSize = 10; $txtCat.Margin = "0,2,0,0"
-            $spName.Children.Add($txtName) | Out-Null
-            $spName.Children.Add($txtCat) | Out-Null
-            [System.Windows.Controls.Grid]::SetColumn($spName, 0)
-            $itemGrid.Children.Add($spName) | Out-Null
+            # CheckBox
+            $chk = New-Object System.Windows.Controls.CheckBox
+            $chk.Content = $tool.name
+            $chk.Foreground = [System.Windows.Media.Brushes]::White
+            $chk.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+            $chk.IsChecked = $shouldCheck
+            [System.Windows.Controls.Grid]::SetColumn($chk, 0)
+            $itemGrid.Children.Add($chk) | Out-Null
 
-            # Version block
+            $global:DownloadCheckBoxes[$tool.id] = $chk
+
+            # Version/Status Block
             $spVer = New-Object System.Windows.Controls.StackPanel
-            $txtLocalVer = New-Object System.Windows.Controls.TextBlock; $txtLocalVer.Text = "Local : $localVer"; $txtLocalVer.Foreground = [System.Windows.Media.Brushes]::LightGray; $txtLocalVer.FontSize = 11
-            $txtRemoteVer = New-Object System.Windows.Controls.TextBlock; $txtRemoteVer.Text = "Distant : $($tool.version)"; $txtRemoteVer.Foreground = [System.Windows.Media.Brushes]::Gray; $txtRemoteVer.FontSize = 11; $txtRemoteVer.Margin = "0,2,0,0"
-            $spVer.Children.Add($txtLocalVer) | Out-Null
-            $spVer.Children.Add($txtRemoteVer) | Out-Null
+            $spVer.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+            $spVer.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+
+            $txtLocal = New-Object System.Windows.Controls.TextBlock
+            $txtLocal.Text = "Loc: $localVer"
+            $txtLocal.Foreground = [System.Windows.Media.Brushes]::Gray
+            $txtLocal.FontSize = 9
+
+            $txtStat = New-Object System.Windows.Controls.TextBlock
+            $txtStat.Text = $statusText
+            $txtStat.Foreground = $colorBrush
+            $txtStat.FontSize = 9
+            $txtStat.FontWeight = [System.Windows.FontWeights]::SemiBold
+
+            $spVer.Children.Add($txtLocal) | Out-Null
+            $spVer.Children.Add($txtStat) | Out-Null
             [System.Windows.Controls.Grid]::SetColumn($spVer, 1)
             $itemGrid.Children.Add($spVer) | Out-Null
 
-            # Status block
-            $spStatus = New-Object System.Windows.Controls.StackPanel
-            $spStatus.Orientation = [System.Windows.Controls.Orientation]::Horizontal
-            $spStatus.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-            
-            $pastille = New-Object System.Windows.Controls.Border
-            $pastille.Width = 10; $pastille.Height = 10; $pastille.CornerRadius = New-Object System.Windows.CornerRadius(5)
-            $pastille.Background = $colorBrush; $pastille.Margin = "0,0,8,0"
-            
-            $txtStatus = New-Object System.Windows.Controls.TextBlock
-            $txtStatus.Text = $statusText; $txtStatus.Foreground = $colorBrush; $txtStatus.FontSize = 11; $txtStatus.FontWeight = [System.Windows.FontWeights]::SemiBold
-            
-            $spStatus.Children.Add($pastille) | Out-Null
-            $spStatus.Children.Add($txtStatus) | Out-Null
-            [System.Windows.Controls.Grid]::SetColumn($spStatus, 2)
-            $itemGrid.Children.Add($spStatus) | Out-Null
-
-            # Action Button
-            $btnAction = New-Object System.Windows.Controls.Button
-            $btnAction.Content = $btnText
-            $btnAction.Width = 110; $btnAction.Height = 24; $btnAction.IsEnabled = $btnEnabled
-            $btnAction.FontWeight = [System.Windows.FontWeights]::Bold; $btnAction.FontSize = 11; $btnAction.Cursor = [System.Windows.Input.Cursors]::Hand
-            
-            if ($statusText -eq "A jour" -or $statusText -eq "Ã€ jour") {
-                $btnAction.Background = $BrushConverter.ConvertFromString("#2D3748")
-                $btnAction.Foreground = [System.Windows.Media.Brushes]::LightGray
-            } else {
-                $btnAction.Background = $BrushConverter.ConvertFromString("#00adb5")
-                $btnAction.Foreground = [System.Windows.Media.Brushes]::White
-            }
-
-            # Liaison evenement Clic avec fermeture
-            $toolId = $tool.id
-            $btnAction.Add_Click({
-                Download-PersistentTool -ToolId $toolId
-            }.GetNewClosure())
-
-            [System.Windows.Controls.Grid]::SetColumn($btnAction, 3)
-            $itemGrid.Children.Add($btnAction) | Out-Null
-
-            # Border wrapper
-            $itemBorder = New-Object System.Windows.Controls.Border
-            $itemBorder.Background = $BrushConverter.ConvertFromString("#252530")
-            $itemBorder.CornerRadius = New-Object System.Windows.CornerRadius(4)
-            $itemBorder.Padding = New-Object System.Windows.Thickness(8)
-            $itemBorder.Margin = New-Object System.Windows.Thickness(0,0,0,6)
-            $itemBorder.Child = $itemGrid
-            [void]$WPF_LstDownloads.Items.Add($itemBorder)
+            $sp.Children.Add($itemGrid) | Out-Null
         }
+
+        $gb.Content = $sp
+        [void]$WPF_WrapDownloads.Children.Add($gb)
     }
 
-    $WPF_TxtProgressStatus.Text = "Prêt (Tous les statuts de version chargés)."
+    $WPF_TxtProgressStatus.Text = "Pret (Selectionnez vos outils puis lancez le telechargement)."
 }
 
 # Lancer le téléchargement asynchrone non-bloquant de l'outil via curl.exe avec suivi de taille et écriture de log
@@ -1418,18 +1397,19 @@ function Download-PersistentTool {
     )
 
     $tool = $global:GlobalToolsList | Where-Object { $_.id -eq $ToolId }
-    if (-not $tool) { return }
+    if (-not $tool) { 
+        if ($global:DownloadQueue -and $global:DownloadQueue.Count -gt 0) { Process-DownloadQueue }
+        return 
+    }
 
-    Log-Download "[>>] Démarrage de la procédure de téléchargement de : $($tool.name)"
+    Log-Download "[>>] Demarrage de la procedure de telechargement de : $($tool.name)"
 
-    # Préparer le répertoire final sur le NAS/réseau (Logiciels\NomOutil)
     $dirPath = Join-Path $Config.ToolsPath "Logiciels\$($tool.folder)"
     if (-not (Test-Path $dirPath)) {
         New-Item -ItemType Directory -Path $dirPath -Force | Out-Null
-        Log-Download "Création du dossier de stockage sur le NAS : $dirPath"
+        Log-Download "Creation du dossier de stockage sur le NAS : $dirPath"
     }
 
-    # Déterminer le nom temporaire de fichier (utiliser le filename final attendu pour les exe)
     $url = $tool.url
     $tempFileName = ""
     if ($url -match "\.zip") {
@@ -1439,7 +1419,6 @@ function Download-PersistentTool {
     }
     $finalFilePath = Join-Path $dirPath $tempFileName
 
-    # Préparer le dossier temporaire LOCAL pour éviter les latences/blocages réseau lors du téléchargement par curl
     $localTempDir = Join-Path $env:TEMP "JDS-Downloads-Temp"
     if (-not (Test-Path $localTempDir)) {
         New-Item -ItemType Directory -Path $localTempDir -Force | Out-Null
@@ -1447,115 +1426,122 @@ function Download-PersistentTool {
     $tempFilePath = Join-Path $localTempDir $tempFileName
 
     Log-Download "URL source : $url"
-    Log-Download "Téléchargement local temporaire : $tempFilePath"
+    Log-Download "Telechargement local temporaire : $tempFilePath"
     Log-Download "Destination finale cible : $finalFilePath"
 
-    # Supprimer les anciens fichiers temporaires
     if (Test-Path $tempFilePath) { 
         Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue 
     }
     if (Test-Path $finalFilePath) { 
         Remove-Item -Path $finalFilePath -Force -ErrorAction SilentlyContinue 
-        Log-Download "Suppression du fichier préexistant sur le NAS."
+        Log-Download "Suppression du fichier preexistant sur le NAS."
     }
 
-    $WPF_TxtProgressStatus.Text = "Lancement du téléchargement de $($tool.name)..."
+    $WPF_TxtProgressStatus.Text = "Telechargement de $($tool.name)..."
     $WPF_TxtProgressSpeed.Text = "Connexion..."
     $WPF_ProgressDownload.Value = 0
     $WPF_ProgressDownload.IsIndeterminate = $true
 
     $global:DownloadStartTime = [DateTime]::Now
 
-    # Lancer le téléchargement local via curl.exe directement (sans Start-Process) pour un traitement parfait des arguments et des espaces
     $job = Start-ThreadJob -ArgumentList $tempFilePath, $url {
         param($path, $downloadUrl)
         & curl.exe -L -k -s -o $path -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" $downloadUrl
         return $LASTEXITCODE
     }
-    Log-Download "Thread Job lancé en tâche de fond. Surveillance démarrée."
 
-    # Démarrer un Timer WPF pour surveiller la taille du fichier et calculer la vitesse
     $timer = New-Object System.Windows.Threading.DispatcherTimer
     $timer.Interval = [TimeSpan]::FromMilliseconds(500)
     
     $timer.Add_Tick(({
-        # Sécurité : Si le timer est orphelin/stale (ex: après fermeture/relance du script), auto-destruction
         if ([string]::IsNullOrEmpty($tempFilePath) -or $null -eq $timer) {
             try { $timer.Stop() } catch {}
             return
         }
 
-        # Si le job asynchrone est terminé
         if ($null -eq $job -or (Get-JobFinished -Job $job)) {
             $timer.Stop()
             $WPF_ProgressDownload.IsIndeterminate = $false
             
-            # Récupérer le code de retour du job
             $exitCode = Receive-Job -Job $job
-            Log-Download "Thread de téléchargement terminé. Code retour curl: $exitCode."
             
             if ($exitCode -ne 0 -or -not (Test-Path $tempFilePath) -or (Get-Item $tempFilePath).Length -lt 10KB) {
                 $fileLength = 0
-                if (Test-Path $tempFilePath) {
-                    $fileLength = (Get-Item $tempFilePath).Length
-                }
-                $WPF_TxtProgressStatus.Text = "Échec du téléchargement de $($tool.name) (Code curl: $exitCode)."
+                if (Test-Path $tempFilePath) { $fileLength = (Get-Item $tempFilePath).Length }
+                $WPF_TxtProgressStatus.Text = "Echec du telechargement de $($tool.name) (Code curl: $exitCode)."
                 $WPF_TxtProgressSpeed.Text = ""
                 $WPF_ProgressDownload.Value = 0
-                Log-Download "[!!] ÉCHEC du téléchargement local de $($tool.name). Code curl: $exitCode. Taille du fichier écrit: $fileLength octets."
+                Log-Download "[!!] ECHEC du telechargement de $($tool.name). Taille: $fileLength octets."
                 if (Test-Path $tempFilePath) { Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue }
+                
+                if ($global:DownloadQueue -and $global:DownloadQueue.Count -gt 0) {
+                    Process-DownloadQueue
+                } else {
+                    Populate-Downloads
+                    $WPF_BtnDownloadSelected.IsEnabled = $true
+                    $WPF_BtnSelectAll.IsEnabled = $true
+                    $WPF_BtnDeselectAll.IsEnabled = $true
+                    $WPF_BtnSelectUpdates.IsEnabled = $true
+                }
             } else {
-                # Succès du téléchargement local ! Copie vers le NAS
-                Log-Download "[OK] Fichier téléchargé localement avec succès. Poids : $((Get-Item $tempFilePath).Length) octets."
+                Log-Download "[OK] Telechargement local reussi. Taille: $((Get-Item $tempFilePath).Length) octets."
                 $WPF_TxtProgressStatus.Text = "Copie du fichier vers le NAS..."
                 $WPF_TxtProgressSpeed.Text = "Copie..."
                 
                 try {
-                    Log-Download "Copie du fichier local $tempFilePath vers le NAS $finalFilePath..."
                     Copy-Item -Path $tempFilePath -Destination $finalFilePath -Force
                     Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue
-                    Log-Download "[OK] Copie vers le NAS terminée avec succès."
                     
                     if ($finalFilePath.EndsWith(".zip")) {
                         $WPF_TxtProgressStatus.Text = "Extraction de l'archive ZIP de $($tool.name)..."
                         $WPF_TxtProgressSpeed.Text = "Extraction..."
-                        Log-Download "Extraction de l'archive ZIP lancée vers : $dirPath"
-                        
                         Expand-Archive -Path $finalFilePath -DestinationPath $dirPath -Force
                         Remove-Item -Path $finalFilePath -Force -ErrorAction SilentlyContinue
-                        $WPF_TxtProgressStatus.Text = "Téléchargement et extraction de $($tool.name) terminés !"
-                        Log-Download "[OK] Décompression ZIP terminée avec succès. Nettoyage de l'archive effectué."
-                    } else {
-                        $WPF_TxtProgressStatus.Text = "Téléchargement de $($tool.name) terminé !"
-                        $WPF_TxtProgressSpeed.Text = ""
                     }
+                    
                     $WPF_ProgressDownload.Value = 100
-                    Populate-Downloads
+                    if ($global:DownloadQueue -and $global:DownloadQueue.Count -gt 0) {
+                        Process-DownloadQueue
+                    } else {
+                        $WPF_TxtProgressStatus.Text = "Telechargement de $($tool.name) termine !"
+                        $WPF_TxtProgressSpeed.Text = ""
+                        Populate-Downloads
+                        $WPF_BtnDownloadSelected.IsEnabled = $true
+                        $WPF_BtnSelectAll.IsEnabled = $true
+                        $WPF_BtnDeselectAll.IsEnabled = $true
+                        $WPF_BtnSelectUpdates.IsEnabled = $true
+                    }
                 } catch {
                     $errMsg = if ($_.Exception.Message) { $_.Exception.Message } else { $_.ToString() }
                     $WPF_TxtProgressStatus.Text = "Erreur de copie/extraction : $errMsg"
                     Log-Download "[!!] Erreur lors de la copie ou de l'extraction vers le NAS : $errMsg"
                     $WPF_ProgressDownload.Value = 0
+                    
+                    if ($global:DownloadQueue -and $global:DownloadQueue.Count -gt 0) {
+                        Process-DownloadQueue
+                    } else {
+                        Populate-Downloads
+                        $WPF_BtnDownloadSelected.IsEnabled = $true
+                        $WPF_BtnSelectAll.IsEnabled = $true
+                        $WPF_BtnDeselectAll.IsEnabled = $true
+                        $WPF_BtnSelectUpdates.IsEnabled = $true
+                    }
                 }
             }
             return
         }
 
-        # Mettre à jour l'affichage de la progression
         if (Test-Path $tempFilePath) {
             try {
                 $file = Get-Item $tempFilePath
                 $currentSize = $file.Length
                 $sizeMB = ($currentSize / 1MB).ToString("F1")
-                
-                # Calcul de la vitesse moyenne de téléchargement
                 $elapsed = ([DateTime]::Now - $global:DownloadStartTime).TotalSeconds
                 if ($elapsed -gt 0.1) {
                     $speedVal = ($currentSize / $elapsed) / 1MB
                     $WPF_TxtProgressSpeed.Text = "$($speedVal.ToString('F2')) MB/s"
                 }
-                
-                $WPF_TxtProgressStatus.Text = "Téléchargement de $($tool.name) : $sizeMB MB transférés"
+                $WPF_TxtProgressStatus.Text = "Telechargement de $($tool.name) : $sizeMB MB"
             } catch {}
         }
     }).GetNewClosure())
@@ -1564,8 +1550,93 @@ function Download-PersistentTool {
 }
 
 # Événements bouton rafraîchir
+# Gestionnaire de file d'attente pour le telechargement en lot
+$global:DownloadQueue = [System.Collections.Generic.Queue[string]]::new()
+
+function Process-DownloadQueue {
+    if ($global:DownloadQueue.Count -eq 0) {
+        $WPF_TxtProgressStatus.Text = "Tous les telechargements selectionnes sont termines !"
+        $WPF_TxtProgressSpeed.Text = ""
+        $WPF_ProgressDownload.Value = 100
+        
+        $WPF_BtnDownloadSelected.IsEnabled = $true
+        $WPF_BtnSelectAll.IsEnabled = $true
+        $WPF_BtnDeselectAll.IsEnabled = $true
+        $WPF_BtnSelectUpdates.IsEnabled = $true
+        
+        Populate-Downloads
+        return
+    }
+
+    $nextId = $global:DownloadQueue.Dequeue()
+    Download-PersistentTool -ToolId $nextId
+}
+
 $WPF_BtnRefreshDownloads.Add_Click({
     Populate-Downloads
+})
+
+# Tout cocher
+$WPF_BtnSelectAll.Add_Click({
+    if ($global:DownloadCheckBoxes) {
+        foreach ($chk in $global:DownloadCheckBoxes.Values) {
+            $chk.IsChecked = $true
+        }
+    }
+})
+
+# Tout decocher
+$WPF_BtnDeselectAll.Add_Click({
+    if ($global:DownloadCheckBoxes) {
+        foreach ($chk in $global:DownloadCheckBoxes.Values) {
+            $chk.IsChecked = $false
+        }
+    }
+})
+
+# Cocher uniquement les mises a jour dispo ou non installes
+$WPF_BtnSelectUpdates.Add_Click({
+    if ($global:DownloadCheckBoxes -and $global:DownloadStatuses) {
+        foreach ($id in $global:DownloadCheckBoxes.Keys) {
+            $status = $global:DownloadStatuses[$id]
+            if ($status -eq "Non installe" -or $status -eq "Maj dispo") {
+                $global:DownloadCheckBoxes[$id].IsChecked = $true
+            } else {
+                $global:DownloadCheckBoxes[$id].IsChecked = $false
+            }
+        }
+    }
+})
+
+# Lancer le telechargement de la selection
+$WPF_BtnDownloadSelected.Add_Click({
+    if (-not $global:DownloadCheckBoxes) { return }
+    
+    $selectedIds = @()
+    foreach ($id in $global:DownloadCheckBoxes.Keys) {
+        if ($global:DownloadCheckBoxes[$id].IsChecked) {
+            $selectedIds += $id
+        }
+    }
+
+    if ($selectedIds.Count -eq 0) {
+        [System.Windows.MessageBox]::Show("Veuillez cocher au moins un outil a telecharger.", "Selection vide", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning)
+        return
+    }
+
+    Log-Download "[>>] Telechargement en lot lance pour $($selectedIds.Count) outils."
+
+    $WPF_BtnDownloadSelected.IsEnabled = $false
+    $WPF_BtnSelectAll.IsEnabled = $false
+    $WPF_BtnDeselectAll.IsEnabled = $false
+    $WPF_BtnSelectUpdates.IsEnabled = $false
+
+    $global:DownloadQueue.Clear()
+    foreach ($id in $selectedIds) {
+        $global:DownloadQueue.Enqueue($id)
+    }
+
+    Process-DownloadQueue
 })
 
 
