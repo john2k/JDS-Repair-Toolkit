@@ -199,7 +199,7 @@ $global:WingetAppsList = @(
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="JDS Repair Toolkit - Console de Dépannage v1.0" Height="680" Width="1000"
-        WindowStartupLocation="CenterScreen" Background="#1E1E24" ResizeMode="CanResize">
+        WindowStartupLocation="CenterScreen" Background="#1E1E24" ResizeMode="CanResizeWithGrip">
     <Window.Resources>
         <!-- Styles des boutons de la barre latérale -->
         <Style x:Key="SidebarButton" TargetType="Button">
