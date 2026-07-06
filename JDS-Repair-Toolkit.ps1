@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     JDS-Repair-Toolkit - Outil de Dépannage Windows Unifié
@@ -1254,118 +1254,158 @@ function Populate-Downloads {
 
     $WPF_TxtProgressStatus.Text = "Analyse des fichiers locaux et comparaison..."
 
-    foreach ($tool in $global:GlobalToolsList) {
-        $dirPath = Join-Path $Config.ToolsPath "Logiciels\$($tool.folder)"
-        $filename = $tool.filename
-        $localFile = Join-Path $dirPath $filename
-        
-        # Migration automatique des anciens formats de nommage (ex: eset.exe -> ESETOnlineScanner.exe)
-        $oldFile = Join-Path $dirPath "$($tool.id).exe"
-        if (-not (Test-Path $localFile) -and (Test-Path $oldFile)) {
-            try {
-                Rename-Item -Path $oldFile -NewName $filename -Force -ErrorAction SilentlyContinue
-                Log-Download "[Migration] Fichier renommé automatiquement de $($tool.id).exe vers $filename"
-            } catch {}
-        }
-        
-        $localVer = Get-LocalToolVersion -filePath $localFile
-        
-        $statusText = ""
-        $colorBrush = $null
-        $btnText = ""
-        $btnEnabled = $true
+    $groupedTools = $global:GlobalToolsList | Group-Object category
 
-        if ($localVer -eq "Absent") {
-            $statusText = "Non installé"
-            $colorBrush = [System.Windows.Media.Brushes]::Red
-            $btnText = "Télécharger"
-        } else {
-            if ($localVer -eq $tool.version -or $localVer -eq "Présent") {
-                $statusText = "À jour"
-                $colorBrush = [System.Windows.Media.Brushes]::LightGreen
-                $btnText = "Réinstaller"
-            } else {
-                $statusText = "Mise à jour disponible"
-                $colorBrush = [System.Windows.Media.Brushes]::Orange
-                $btnText = "Mettre à jour"
+    foreach ($group in $groupedTools) {
+        # En-tete de section/categorie
+        $headerBorder = New-Object System.Windows.Controls.Border
+        $headerBorder.Background = $BrushConverter.ConvertFromString("#1a1a24")
+        $headerBorder.BorderBrush = $BrushConverter.ConvertFromString("#00adb5")
+        $headerBorder.BorderThickness = New-Object System.Windows.Thickness(3,0,0,0)
+        $headerBorder.Padding = New-Object System.Windows.Thickness(12,6,12,6)
+        $headerBorder.Margin = New-Object System.Windows.Thickness(0,12,0,8)
+        
+        $emoji = [string]([char]0xD83D) + [string]([char]0xDCC1) # Default folder emoji ðŸ“
+        $catName = $group.Name
+        $desinf = "D" + [char]0xE9 + "sinfection"
+        $syst = "Syst" + [char]0xEA + "me"
+        $reseau = "R" + [char]0xE9 + "seau"
+        
+        if ($catName -eq $desinf) {
+            $emoji = [string]([char]0xD83D) + [string]([char]0xDEE1) # ðŸ›¡ï¸
+        } elseif ($catName -eq "Diagnostics") {
+            $emoji = [string]([char]0xD83D) + [string]([char]0xDCCB) # ðŸ“‹
+        } elseif ($catName -eq "Pilotes") {
+            $emoji = [string]([char]0x2699) # âš™ï¸
+        } elseif ($catName -eq $syst) {
+            $emoji = [string]([char]0xD83D) + [string]([char]0xDCBB) # ðŸ’»
+        } elseif ($catName -eq $reseau) {
+            $emoji = [string]([char]0xD83C) + [string]([char]0xDF10) # ðŸŒ
+        } elseif ($catName -eq "Bureautique") {
+            $emoji = [string]([char]0x270D) # ðŸ“
+        }
+
+        $headerText = New-Object System.Windows.Controls.TextBlock
+        $headerText.Text = "$emoji  $($group.Name.ToUpper())"
+        $headerText.FontWeight = [System.Windows.FontWeights]::Bold
+        $headerText.Foreground = $BrushConverter.ConvertFromString("#00adb5")
+        $headerText.FontSize = 13
+        $headerBorder.Child = $headerText
+        [void]$WPF_LstDownloads.Items.Add($headerBorder)
+
+        foreach ($tool in $group.Group) {
+            $dirPath = Join-Path $Config.ToolsPath "Logiciels\$($tool.folder)"
+            $filename = $tool.filename
+            $localFile = Join-Path $dirPath $filename
+            
+            # Migration automatique des anciens formats de nommage (ex: eset.exe -> ESETOnlineScanner.exe)
+            $oldFile = Join-Path $dirPath "$($tool.id).exe"
+            if (-not (Test-Path $localFile) -and (Test-Path $oldFile)) {
+                try {
+                    Rename-Item -Path $oldFile -NewName $filename -Force -ErrorAction SilentlyContinue
+                    Log-Download "[Migration] Fichier renomme automatiquement de $($tool.id).exe vers $filename"
+                } catch {}
             }
+            
+            $localVer = Get-LocalToolVersion -filePath $localFile
+            
+            $statusText = ""
+            $colorBrush = $null
+            $btnText = ""
+            $btnEnabled = $true
+
+            if ($localVer -eq "Absent") {
+                $statusText = "Non installe"
+                $colorBrush = [System.Windows.Media.Brushes]::Red
+                $btnText = "Telecharger"
+            } else {
+                if ($localVer -eq $tool.version -or $localVer -eq "Present") {
+                    $statusText = "A jour"
+                    $colorBrush = [System.Windows.Media.Brushes]::LightGreen
+                    $btnText = "Reinstaller"
+                } else {
+                    $statusText = "Mise a jour disponible"
+                    $colorBrush = [System.Windows.Media.Brushes]::Orange
+                    $btnText = "Mettre a jour"
+                }
+            }
+
+            # Creer le template WPF programmatiquement
+            $itemGrid = New-Object System.Windows.Controls.Grid
+            $itemGrid.Margin = "5"
+            
+            $col0 = New-Object System.Windows.Controls.ColumnDefinition; $col0.Width = New-Object System.Windows.GridLength(320); $itemGrid.ColumnDefinitions.Add($col0)
+            $col1 = New-Object System.Windows.Controls.ColumnDefinition; $col1.Width = New-Object System.Windows.GridLength(180); $itemGrid.ColumnDefinitions.Add($col1)
+            $col2 = New-Object System.Windows.Controls.ColumnDefinition; $col2.Width = New-Object System.Windows.GridLength(150); $itemGrid.ColumnDefinitions.Add($col2)
+            $col3 = New-Object System.Windows.Controls.ColumnDefinition; $col3.Width = [System.Windows.GridLength]::Auto; $itemGrid.ColumnDefinitions.Add($col3)
+
+            # Name block
+            $spName = New-Object System.Windows.Controls.StackPanel
+            $txtName = New-Object System.Windows.Controls.TextBlock; $txtName.Text = $tool.name; $txtName.FontWeight = [System.Windows.FontWeights]::Bold; $txtName.Foreground = [System.Windows.Media.Brushes]::White; $txtName.FontSize = 13
+            $txtCat = New-Object System.Windows.Controls.TextBlock; $txtCat.Text = $tool.category; $txtCat.Foreground = [System.Windows.Media.Brushes]::Gray; $txtCat.FontSize = 10; $txtCat.Margin = "0,2,0,0"
+            $spName.Children.Add($txtName) | Out-Null
+            $spName.Children.Add($txtCat) | Out-Null
+            [System.Windows.Controls.Grid]::SetColumn($spName, 0)
+            $itemGrid.Children.Add($spName) | Out-Null
+
+            # Version block
+            $spVer = New-Object System.Windows.Controls.StackPanel
+            $txtLocalVer = New-Object System.Windows.Controls.TextBlock; $txtLocalVer.Text = "Local : $localVer"; $txtLocalVer.Foreground = [System.Windows.Media.Brushes]::LightGray; $txtLocalVer.FontSize = 11
+            $txtRemoteVer = New-Object System.Windows.Controls.TextBlock; $txtRemoteVer.Text = "Distant : $($tool.version)"; $txtRemoteVer.Foreground = [System.Windows.Media.Brushes]::Gray; $txtRemoteVer.FontSize = 11; $txtRemoteVer.Margin = "0,2,0,0"
+            $spVer.Children.Add($txtLocalVer) | Out-Null
+            $spVer.Children.Add($txtRemoteVer) | Out-Null
+            [System.Windows.Controls.Grid]::SetColumn($spVer, 1)
+            $itemGrid.Children.Add($spVer) | Out-Null
+
+            # Status block
+            $spStatus = New-Object System.Windows.Controls.StackPanel
+            $spStatus.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+            $spStatus.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+            
+            $pastille = New-Object System.Windows.Controls.Border
+            $pastille.Width = 10; $pastille.Height = 10; $pastille.CornerRadius = New-Object System.Windows.CornerRadius(5)
+            $pastille.Background = $colorBrush; $pastille.Margin = "0,0,8,0"
+            
+            $txtStatus = New-Object System.Windows.Controls.TextBlock
+            $txtStatus.Text = $statusText; $txtStatus.Foreground = $colorBrush; $txtStatus.FontSize = 11; $txtStatus.FontWeight = [System.Windows.FontWeights]::SemiBold
+            
+            $spStatus.Children.Add($pastille) | Out-Null
+            $spStatus.Children.Add($txtStatus) | Out-Null
+            [System.Windows.Controls.Grid]::SetColumn($spStatus, 2)
+            $itemGrid.Children.Add($spStatus) | Out-Null
+
+            # Action Button
+            $btnAction = New-Object System.Windows.Controls.Button
+            $btnAction.Content = $btnText
+            $btnAction.Width = 110; $btnAction.Height = 24; $btnAction.IsEnabled = $btnEnabled
+            $btnAction.FontWeight = [System.Windows.FontWeights]::Bold; $btnAction.FontSize = 11; $btnAction.Cursor = [System.Windows.Input.Cursors]::Hand
+            
+            if ($statusText -eq "A jour" -or $statusText -eq "Ã€ jour") {
+                $btnAction.Background = $BrushConverter.ConvertFromString("#2D3748")
+                $btnAction.Foreground = [System.Windows.Media.Brushes]::LightGray
+            } else {
+                $btnAction.Background = $BrushConverter.ConvertFromString("#00adb5")
+                $btnAction.Foreground = [System.Windows.Media.Brushes]::White
+            }
+
+            # Liaison evenement Clic avec fermeture
+            $toolId = $tool.id
+            $btnAction.Add_Click({
+                Download-PersistentTool -ToolId $toolId
+            }.GetNewClosure())
+
+            [System.Windows.Controls.Grid]::SetColumn($btnAction, 3)
+            $itemGrid.Children.Add($btnAction) | Out-Null
+
+            # Border wrapper
+            $itemBorder = New-Object System.Windows.Controls.Border
+            $itemBorder.Background = $BrushConverter.ConvertFromString("#252530")
+            $itemBorder.CornerRadius = New-Object System.Windows.CornerRadius(4)
+            $itemBorder.Padding = New-Object System.Windows.Thickness(8)
+            $itemBorder.Margin = New-Object System.Windows.Thickness(0,0,0,6)
+            $itemBorder.Child = $itemGrid
+            [void]$WPF_LstDownloads.Items.Add($itemBorder)
         }
-
-        # Créer le template WPF programmatiquement
-        $itemGrid = New-Object System.Windows.Controls.Grid
-        $itemGrid.Margin = "5"
-        
-        $col0 = New-Object System.Windows.Controls.ColumnDefinition; $col0.Width = New-Object System.Windows.GridLength(320); $itemGrid.ColumnDefinitions.Add($col0)
-        $col1 = New-Object System.Windows.Controls.ColumnDefinition; $col1.Width = New-Object System.Windows.GridLength(180); $itemGrid.ColumnDefinitions.Add($col1)
-        $col2 = New-Object System.Windows.Controls.ColumnDefinition; $col2.Width = New-Object System.Windows.GridLength(150); $itemGrid.ColumnDefinitions.Add($col2)
-        $col3 = New-Object System.Windows.Controls.ColumnDefinition; $col3.Width = [System.Windows.GridLength]::Auto; $itemGrid.ColumnDefinitions.Add($col3)
-
-        # Name block
-        $spName = New-Object System.Windows.Controls.StackPanel
-        $txtName = New-Object System.Windows.Controls.TextBlock; $txtName.Text = $tool.name; $txtName.FontWeight = [System.Windows.FontWeights]::Bold; $txtName.Foreground = [System.Windows.Media.Brushes]::White; $txtName.FontSize = 13
-        $txtCat = New-Object System.Windows.Controls.TextBlock; $txtCat.Text = $tool.category; $txtCat.Foreground = [System.Windows.Media.Brushes]::Gray; $txtCat.FontSize = 10; $txtCat.Margin = "0,2,0,0"
-        $spName.Children.Add($txtName) | Out-Null
-        $spName.Children.Add($txtCat) | Out-Null
-        [System.Windows.Controls.Grid]::SetColumn($spName, 0)
-        $itemGrid.Children.Add($spName) | Out-Null
-
-        # Version block
-        $spVer = New-Object System.Windows.Controls.StackPanel
-        $txtLocalVer = New-Object System.Windows.Controls.TextBlock; $txtLocalVer.Text = "Local : $localVer"; $txtLocalVer.Foreground = [System.Windows.Media.Brushes]::LightGray; $txtLocalVer.FontSize = 11
-        $txtRemoteVer = New-Object System.Windows.Controls.TextBlock; $txtRemoteVer.Text = "Distant : $($tool.version)"; $txtRemoteVer.Foreground = [System.Windows.Media.Brushes]::Gray; $txtRemoteVer.FontSize = 11; $txtRemoteVer.Margin = "0,2,0,0"
-        $spVer.Children.Add($txtLocalVer) | Out-Null
-        $spVer.Children.Add($txtRemoteVer) | Out-Null
-        [System.Windows.Controls.Grid]::SetColumn($spVer, 1)
-        $itemGrid.Children.Add($spVer) | Out-Null
-
-        # Status block
-        $spStatus = New-Object System.Windows.Controls.StackPanel
-        $spStatus.Orientation = [System.Windows.Controls.Orientation]::Horizontal
-        $spStatus.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-        
-        $pastille = New-Object System.Windows.Controls.Border
-        $pastille.Width = 10; $pastille.Height = 10; $pastille.CornerRadius = New-Object System.Windows.CornerRadius(5)
-        $pastille.Background = $colorBrush; $pastille.Margin = "0,0,8,0"
-        
-        $txtStatus = New-Object System.Windows.Controls.TextBlock
-        $txtStatus.Text = $statusText; $txtStatus.Foreground = $colorBrush; $txtStatus.FontSize = 11; $txtStatus.FontWeight = [System.Windows.FontWeights]::SemiBold
-        
-        $spStatus.Children.Add($pastille) | Out-Null
-        $spStatus.Children.Add($txtStatus) | Out-Null
-        [System.Windows.Controls.Grid]::SetColumn($spStatus, 2)
-        $itemGrid.Children.Add($spStatus) | Out-Null
-
-        # Action Button
-        $btnAction = New-Object System.Windows.Controls.Button
-        $btnAction.Content = $btnText
-        $btnAction.Width = 110; $btnAction.Height = 24; $btnAction.IsEnabled = $btnEnabled
-        $btnAction.FontWeight = [System.Windows.FontWeights]::Bold; $btnAction.FontSize = 11; $btnAction.Cursor = [System.Windows.Input.Cursors]::Hand
-        
-        if ($statusText -eq "À jour") {
-            $btnAction.Background = $BrushConverter.ConvertFromString("#2D3748")
-            $btnAction.Foreground = [System.Windows.Media.Brushes]::LightGray
-        } else {
-            $btnAction.Background = $BrushConverter.ConvertFromString("#00adb5")
-            $btnAction.Foreground = [System.Windows.Media.Brushes]::White
-        }
-
-        # Liaison événement Clic avec fermeture
-        $toolId = $tool.id
-        $btnAction.Add_Click({
-            Download-PersistentTool -ToolId $toolId
-        }.GetNewClosure())
-
-        [System.Windows.Controls.Grid]::SetColumn($btnAction, 3)
-        $itemGrid.Children.Add($btnAction) | Out-Null
-
-        # Border wrapper
-        $itemBorder = New-Object System.Windows.Controls.Border
-        $itemBorder.Background = $BrushConverter.ConvertFromString("#252530")
-        $itemBorder.CornerRadius = New-Object System.Windows.CornerRadius(4)
-        $itemBorder.Padding = New-Object System.Windows.Thickness(8)
-        $itemBorder.Margin = New-Object System.Windows.Thickness(0,0,0,6)
-        $itemBorder.Child = $itemGrid
-        [void]$WPF_LstDownloads.Items.Add($itemBorder)
     }
 
     $WPF_TxtProgressStatus.Text = "Prêt (Tous les statuts de version chargés)."
