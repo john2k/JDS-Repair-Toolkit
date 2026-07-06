@@ -282,6 +282,7 @@ $global:WingetAppsList = @(
                     <Button Name="BtnTabTools" Style="{StaticResource SidebarButton}" Content="🧰  Outils Tiers"/>
                     <Button Name="BtnTabDownloads" Style="{StaticResource SidebarButton}" Content="📥  Téléchargements"/>
                     <Button Name="BtnTabWinget" Style="{StaticResource SidebarButton}" Content="📦  Applications (Winget)"/>
+                    <Button Name="BtnTabTweaks" Style="{StaticResource SidebarButton}" Content="⚡  Optimisations (Tweaks)"/>
                 </StackPanel>
 
                 <!-- Status / Version footer -->
@@ -835,6 +836,81 @@ $global:WingetAppsList = @(
                         </Grid>
                     </Border>
                 </Grid>
+
+                <!-- Onglet OPTIMISATIONS (TWEAKS STYLE CHRIS TITUS) -->
+                <Grid Name="GridTweaks" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- En-tete -->
+                    <Grid Grid.Row="0" Margin="0,0,0,15">
+                        <TextBlock Text="Optimisations du Systeme (Tweaks)" FontSize="22" FontWeight="Bold" Foreground="White"/>
+                    </Grid>
+
+                    <!-- ScrollViewer contenant les categories de tweaks -->
+                    <ScrollViewer Grid.Row="1" Background="#1E1E24" BorderBrush="#444455" BorderThickness="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="10">
+                        <WrapPanel Margin="0">
+                            <!-- Securite & Telemetrie -->
+                            <GroupBox Width="350" Margin="5" Background="#1a1a24" BorderBrush="#444455" Foreground="White">
+                                <GroupBox.Header>
+                                    <TextBlock Text="🛡️  SECURITE &amp; TELEMETRIE" FontWeight="Bold" Foreground="#00adb5"/>
+                                </GroupBox.Header>
+                                <StackPanel Margin="5">
+                                    <CheckBox Name="ChkTweakTelemetry" Content="Désactiver la télémétrie &amp; DiagTrack" Foreground="White" IsChecked="True" Margin="0,5,0,5"/>
+                                    <CheckBox Name="ChkTweakBingSearch" Content="Désactiver Bing dans le menu Démarrer" Foreground="White" IsChecked="True" Margin="0,5,0,5"/>
+                                    <CheckBox Name="ChkTweakCortana" Content="Désactiver Cortana" Foreground="White" IsChecked="True" Margin="0,5,0,5"/>
+                                </StackPanel>
+                            </GroupBox>
+
+                            <!-- Performances & Ergonomie -->
+                            <GroupBox Width="350" Margin="5" Background="#1a1a24" BorderBrush="#444455" Foreground="White">
+                                <GroupBox.Header>
+                                    <TextBlock Text="⚡  PERFORMANCES &amp; ERGONOMIE" FontWeight="Bold" Foreground="#00adb5"/>
+                                </GroupBox.Header>
+                                <StackPanel Margin="5">
+                                    <CheckBox Name="ChkTweakHibernation" Content="Désactiver l'hibernation (libère de l'espace)" Foreground="White" IsChecked="False" Margin="0,5,0,5"/>
+                                    <CheckBox Name="ChkTweakGameDVR" Content="Désactiver Game DVR &amp; Game Bar" Foreground="White" IsChecked="True" Margin="0,5,0,5"/>
+                                    <CheckBox Name="ChkTweakStickyKeys" Content="Désactiver les touches rémanentes (Sticky)" Foreground="White" IsChecked="True" Margin="0,5,0,5"/>
+                                </StackPanel>
+                            </GroupBox>
+
+                            <!-- Services & Rapports -->
+                            <GroupBox Width="350" Margin="5" Background="#1a1a24" BorderBrush="#444455" Foreground="White">
+                                <GroupBox.Header>
+                                    <TextBlock Text="🛑  SERVICES &amp; DIAGNOSTICS" FontWeight="Bold" Foreground="#00adb5"/>
+                                </GroupBox.Header>
+                                <StackPanel Margin="5">
+                                    <CheckBox Name="ChkTweakErrorReporting" Content="Désactiver Windows Error Reporting" Foreground="White" IsChecked="True" Margin="0,5,0,5"/>
+                                </StackPanel>
+                            </GroupBox>
+
+                            <!-- Point de Restauration -->
+                            <GroupBox Width="350" Margin="5" Background="#1a1a24" BorderBrush="#444455" Foreground="White">
+                                <GroupBox.Header>
+                                    <TextBlock Text="🔄  SECURITE PREALABLE" FontWeight="Bold" Foreground="#00adb5"/>
+                                </GroupBox.Header>
+                                <StackPanel Margin="5">
+                                    <CheckBox Name="ChkTweakRestorePoint" Content="Créer un point de restauration (Recommandé)" Foreground="White" IsChecked="True" Margin="0,5,0,5"/>
+                                </StackPanel>
+                            </GroupBox>
+                        </WrapPanel>
+                    </ScrollViewer>
+
+                    <!-- Terminal de logs pour les tweaks -->
+                    <Border Grid.Row="2" Background="#252530" CornerRadius="5" Padding="15" Margin="0,15,0,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBox Grid.Row="0" Name="TxtLogTweaks" Height="100" Background="#121216" Foreground="#00FF00" FontFamily="Consolas" FontSize="11" IsReadOnly="True" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" Text="Sélectionnez des optimisations et cliquez sur Appliquer..." BorderThickness="1" BorderBrush="#333333" Margin="0,0,0,10"/>
+                            <Button Grid.Row="1" Name="BtnApplyTweaks" Style="{StaticResource ModernButton}" Content="⚡  Appliquer les optimisations sélectionnées" Height="30" Width="300" HorizontalAlignment="Right" FontWeight="Bold"/>
+                        </Grid>
+                    </Border>
+                </Grid>
             </Grid>
         </Grid>
 
@@ -1055,7 +1131,7 @@ $WPF_BtnChangePath.Add_Click({
 })
 
 # --- Logique de navigation des onglets ---
-$Grids = @($WPF_GridDiag, $WPF_GridClean, $WPF_GridRepair, $WPF_GridApps, $WPF_GridBackup, $WPF_GridOptane, $WPF_GridTools, $WPF_GridDownloads, $WPF_GridWinget)
+$Grids = @($WPF_GridDiag, $WPF_GridClean, $WPF_GridRepair, $WPF_GridApps, $WPF_GridBackup, $WPF_GridOptane, $WPF_GridTools, $WPF_GridDownloads, $WPF_GridWinget, $WPF_GridTweaks)
 
 function Show-Tab ($activeGrid) {
     foreach ($grid in $Grids) {
@@ -1086,6 +1162,9 @@ $WPF_BtnTabDownloads.Add_Click({
 $WPF_BtnTabWinget.Add_Click({ 
     Show-Tab $WPF_GridWinget
     Populate-Winget
+})
+$WPF_BtnTabTweaks.Add_Click({ 
+    Show-Tab $WPF_GridTweaks
 })
 
 # --- LOGIQUE ONGLET : SCANNERS & DESINSTALLATION ---
@@ -2447,4 +2526,112 @@ if (-not [string]::IsNullOrEmpty($Config.ToolsPath)) {
 }
 
 # Lancer la boucle WPF
+# --- OPTIMISATIONS ET TWEAKS DU SYSTEME (STYLE CHRIS TITUS) ---
+$WPF_BtnApplyTweaks.Add_Click({
+    $WPF_BtnApplyTweaks.IsEnabled = $false
+    $WPF_TxtLogTweaks.Clear()
+    
+    $runRestore = $WPF_ChkTweakRestorePoint.IsChecked -eq $true
+    $runTelemetry = $WPF_ChkTweakTelemetry.IsChecked -eq $true
+    $runBing = $WPF_ChkTweakBingSearch.IsChecked -eq $true
+    $runCortana = $WPF_ChkTweakCortana.IsChecked -eq $true
+    $runHiber = $WPF_ChkTweakHibernation.IsChecked -eq $true
+    $runGameDVR = $WPF_ChkTweakGameDVR.IsChecked -eq $true
+    $runSticky = $WPF_ChkTweakStickyKeys.IsChecked -eq $true
+    $runErrRep = $WPF_ChkTweakErrorReporting.IsChecked -eq $true
+
+    [void]$WPF_TxtLogTweaks.AppendText("[>>] Lancement de la procedure d'optimisation...`n")
+
+    $job = Start-ThreadJob -ArgumentList $runRestore, $runTelemetry, $runBing, $runCortana, $runHiber, $runGameDVR, $runSticky, $runErrRep {
+        param($restore, $telemetry, $bing, $cortana, $hiber, $gameDVR, $sticky, $errRep)
+        
+        $output = @()
+        
+        # 1. Point de restauration
+        if ($restore) {
+            $output += "[>>] Creation d'un point de restauration systeme (JDS-Toolkit-Restore)..."
+            try {
+                Enable-ComputerRestore -Drive "C:" -ErrorAction SilentlyContinue
+                Checkpoint-Computer -Description "JDS-Toolkit-Restore" -RestorePointType "APPLICATION_INSTALL" -ErrorAction Stop
+                $output += "[OK] Point de restauration cree avec succes."
+            } catch {
+                $output += "[!!] Erreur lors de la creation du point de restauration : $($_.Exception.Message)"
+            }
+        }
+        
+        # 2. Telemetrie
+        if ($telemetry) {
+            $output += "[>>] Desactivation de la telemetrie et collecte de donnees..."
+            Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "AllowTelemetry" -Value 0 -Force -ErrorAction SilentlyContinue
+            Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection" -Name "AllowTelemetry" -Value 0 -Force -ErrorAction SilentlyContinue
+            Stop-Service -Name "DiagTrack" -Force -ErrorAction SilentlyContinue
+            Set-Service -Name "DiagTrack" -StartupType Disabled -ErrorAction SilentlyContinue
+            $output += "[OK] Telemetrie et DiagTrack desactives."
+        }
+        
+        # 3. Bing Search
+        if ($bing) {
+            $output += "[>>] Desactivation de la recherche Bing dans le menu Demarrer..."
+            Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" -Name "BingSearchEnabled" -Value 0 -Force -ErrorAction SilentlyContinue
+            Set-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" -Name "CortanaConsent" -Value 0 -Force -ErrorAction SilentlyContinue
+            $output += "[OK] Recherche Bing desactivee."
+        }
+        
+        # 4. Cortana
+        if ($cortana) {
+            $output += "[>>] Desactivation de Cortana..."
+            Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "AllowCortana" -Value 0 -Force -ErrorAction SilentlyContinue
+            $output += "[OK] Cortana desactive."
+        }
+        
+        # 5. Hibernation
+        if ($hiber) {
+            $output += "[>>] Desactivation de l'hibernation..."
+            & powercfg.exe /h off
+            $output += "[OK] Hibernation desactivee."
+        }
+        
+        # 6. Game DVR
+        if ($gameDVR) {
+            $output += "[>>] Desactivation de Game DVR et Game Bar..."
+            Set-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name "GameDVR_Enabled" -Value 0 -Force -ErrorAction SilentlyContinue
+            Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\GameDVR" -Name "AllowGameDVR" -Value 0 -Force -ErrorAction SilentlyContinue
+            $output += "[OK] Game DVR et Game Bar desactives."
+        }
+        
+        # 7. Sticky Keys
+        if ($sticky) {
+            $output += "[>>] Desactivation des touches remanentes (Sticky Keys)..."
+            Set-ItemProperty -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name "Flags" -Value "506" -Force -ErrorAction SilentlyContinue
+            $output += "[OK] Touches remanentes desactivees."
+        }
+        
+        # 8. Error Reporting
+        if ($errRep) {
+            $output += "[>>] Desactivation de Windows Error Reporting..."
+            Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting" -Name "Disabled" -Value 1 -Force -ErrorAction SilentlyContinue
+            $output += "[OK] Rapports d'erreurs Windows desactives."
+        }
+
+        $output += "[SUCCESS] Toutes les optimisations selectionnees ont ete appliquees !"
+        return $output
+    }
+
+    $timer = New-Object System.Windows.Threading.DispatcherTimer
+    $timer.Interval = [TimeSpan]::FromMilliseconds(300)
+    $timer.Add_Tick(({
+        if ($null -eq $job -or (Get-JobFinished -Job $job)) {
+            $timer.Stop()
+            $results = Receive-Job -Job $job
+            foreach ($line in $results) {
+                [void]$WPF_TxtLogTweaks.AppendText("$line`n")
+            }
+            [void]$WPF_TxtLogTweaks.ScrollToEnd()
+            $WPF_BtnApplyTweaks.IsEnabled = $true
+            return
+        }
+    }).GetNewClosure())
+    $timer.Start()
+})
+
 $Form.ShowDialog() | Out-Null
